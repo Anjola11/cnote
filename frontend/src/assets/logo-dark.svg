@@ -1,0 +1,11 @@
+<svg width="300" height="100" viewBox="0 0 300 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Purple Box: Perfectly centered C icon -->
+  <rect x="10" y="20" width="60" height="60" rx="14" fill="#6B5CE7"/>
+  
+  <!-- Stylized "C" centered exactly in the 60x60 box (center at 40, 50) -->
+  <path d="M55 40C53 36 48 34 43 34C36 34 30 40 30 48C30 56 36 62 43 62C48 62 53 60 55 56" stroke="white" stroke-width="7" stroke-linecap="round"/>
+  <path d="M55 56L60 66L50 66L55 56Z" fill="white"/>
+  
+  <!-- "note" text with lighter purple for dark mode -->
+  <text x="82" y="62" fill="#8B7CF6" style="font-family: 'DM Serif Display', serif; font-size: 54px; font-weight: bold;">note</text>
+</svg>

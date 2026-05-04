@@ -1,0 +1,27 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: var(--font-body);
+  white-space: nowrap;
+}
+.badge i {
+  font-size: 10px;
+}
+
+.badge--prog {
+  background: var(--accent-light);
+  color: var(--cat-prog);
+}
+.badge--spirit {
+  background: rgba(124, 58, 237, 0.1);
+  color: var(--cat-spirit);
+}
+.badge--general {
+  background: rgba(217, 119, 6, 0.1);
+  color: var(--cat-general);
+}

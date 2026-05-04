@@ -1,0 +1,145 @@
+.code-block {
+  position: relative !important;
+  margin: 1.5rem 0 !important;
+  background: #1e1e1e !important;
+  border-radius: 8px !important;
+  overflow: visible !important; /* Changed from hidden to ensure selector dropdown works */
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+  display: block !important;
+}
+
+.code-block__header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 8px 16px !important;
+  background: #252526 !important; /* Slightly lighter than the box */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  min-height: 36px !important;
+  border-top-left-radius: 8px !important;
+  border-top-right-radius: 8px !important;
+}
+
+.code-block__language {
+  background: transparent;
+  border: none;
+  color: #8B7CF6;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: background 0.2s;
+  outline: none;
+}
+
+.code-block__language:hover {
+  background: rgba(139, 124, 246, 0.1);
+}
+
+.code-block__language option {
+  background: #1e1e1e;
+  color: #fff;
+  text-transform: none;
+}
+
+.code-block__copy {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.code-block__copy:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.code-block__copy span {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.code-block pre {
+  margin: 0;
+  padding: 1.25rem 1rem;
+  background: transparent !important;
+  font-family: 'Fira Code', 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-x: auto;
+}
+
+.code-block .code-content {
+  background: transparent !important;
+  color: #d4d4d4;
+  padding: 0 !important;
+  border-radius: 0 !important;
+}
+
+/* Syntax Highlighting overrides for dark mode */
+.hljs-comment,
+.hljs-quote {
+  color: #6a9955;
+  font-style: italic;
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-section,
+.hljs-link {
+  color: #569cd6;
+}
+
+.hljs-function,
+.hljs-params {
+  color: #dcdcaa;
+}
+
+.hljs-string,
+.hljs-attribute {
+  color: #ce9178;
+}
+
+.hljs-number,
+.hljs-regexp,
+.hljs-variable,
+.hljs-template-variable {
+  color: #b5cea8;
+}
+
+.hljs-type,
+.hljs-built_in,
+.hljs-class,
+.hljs-title {
+  color: #4ec9b0;
+}
+
+.hljs-symbol,
+.hljs-bullet,
+.hljs-subst,
+.hljs-meta,
+.hljs-selector-id,
+.hljs-selector-class {
+  color: #d7ba7d;
+}
+
+.hljs-addition {
+  background-color: rgba(163, 190, 140, 0.3);
+}
+
+.hljs-deletion {
+  background-color: rgba(191, 97, 106, 0.3);
+}

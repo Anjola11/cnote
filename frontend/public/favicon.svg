@@ -1,0 +1,14 @@
+<svg width="240" height="80" viewBox="0 0 240 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Square-ish icon with lines -->
+  <rect x="10" y="15" width="45" height="45" rx="8" stroke="#4C3A94" stroke-width="4"/>
+  <path d="M20 28H45" stroke="#4C3A94" stroke-width="4" stroke-linecap="round"/>
+  <path d="M20 38H45" stroke="#4C3A94" stroke-width="4" stroke-linecap="round"/>
+  <path d="M20 48H32" stroke="#4C3A94" stroke-width="4" stroke-linecap="round"/>
+  
+  <!-- Pencil icon overlapping -->
+  <path d="M42 42L58 26L66 34L50 50L42 42Z" fill="#4C3A94"/>
+  <path d="M41 43L38 52L47 49L41 43Z" fill="#4C3A94"/>
+  
+  <!-- "Cnote" text -->
+  <text x="75" y="52" fill="#4C3A94" style="font-family: 'DM Serif Display', serif; font-size: 44px; font-weight: bold;">Cnote</text>
+</svg>

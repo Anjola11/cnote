@@ -1,0 +1,189 @@
+@import './variables.css';
+@import './animations.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--bg);
+  color: var(--text-primary);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Smooth theme transitions */
+body,
+body * {
+  transition:
+    background-color 0.4s ease,
+    color 0.3s ease,
+    border-color 0.3s ease;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-heading);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+}
+
+input, textarea, select {
+  font-family: inherit;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+/* Scrollbar styles */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ===== ProseMirror / Tiptap Editor Styles ===== */
+.ProseMirror {
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.75;
+  color: var(--text-primary);
+  outline: none;
+}
+.ProseMirror p {
+  margin-bottom: 12px;
+}
+.ProseMirror h1 {
+  font-family: var(--font-heading);
+  font-size: 28px;
+  margin: 28px 0 12px;
+}
+.ProseMirror h2 {
+  font-family: var(--font-heading);
+  font-size: 22px;
+  margin: 24px 0 10px;
+}
+.ProseMirror h3 {
+  font-family: var(--font-heading);
+  font-size: 18px;
+  margin: 20px 0 8px;
+}
+.ProseMirror strong {
+  font-weight: 600;
+}
+.ProseMirror em {
+  font-style: italic;
+  color: var(--text-secondary);
+}
+.ProseMirror blockquote {
+  border-left: 3px solid var(--accent);
+  padding-left: 16px;
+  margin-left: 0;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 24px;
+  margin-bottom: 12px;
+}
+.ProseMirror li {
+  margin-bottom: 4px;
+}
+.ProseMirror img {
+  border-radius: var(--radius-md);
+  max-width: 100%;
+  margin: 16px 0;
+}
+.ProseMirror .is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--text-muted);
+  pointer-events: none;
+  float: left;
+  height: 0;
+}
+
+/* Code blocks */
+.ProseMirror pre {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  overflow-x: auto;
+  font-family: 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 16px 0;
+}
+.ProseMirror pre code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+}
+
+/* Links in editor */
+.ProseMirror a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  word-break: break-all;
+}
+.ProseMirror a:hover {
+  color: var(--accent-hover);
+  text-decoration-thickness: 2px;
+}
+
+/* Scripture block */
+.scripture-block {
+  background: rgba(124, 58, 237, 0.05);
+  border-left: 3px solid var(--cat-spirit);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin: 16px 0;
+}
+.scripture-block .scripture-ref {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--cat-spirit);
+  margin-bottom: 4px;
+}
+.scripture-block .scripture-text {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 16px;
+  color: var(--text-primary);
+  line-height: 1.5;
+}

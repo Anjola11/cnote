@@ -1,0 +1,62 @@
+:root {
+  --bg: #fafaf8;
+  --bg-secondary: #f2f1ee;
+  --bg-card: #ffffff;
+  --bg-card-rgb: 255, 255, 255;
+  --text-primary: #111110;
+  --text-secondary: #6b6a65;
+  --text-muted: #a8a79f;
+  --accent: #4C3A94;
+  --accent-hover: #3b2c73;
+  --accent-light: #f5f3ff;
+  --border: #e5e4de;
+  --danger: #dc2626;
+  --success: #16a34a;
+
+  /* Category colours */
+  --cat-prog: #2563eb;
+  --cat-spirit: #4C3A94;
+  --cat-general: #d97706;
+
+  /* Radii */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.12);
+
+  /* Transitions */
+  --transition: 0.2s ease;
+
+  /* Typography */
+  --font-heading: 'DM Serif Display', Georgia, serif;
+  --font-body: 'DM Sans', system-ui, sans-serif;
+}
+
+[data-theme='dark'] {
+  --bg: #0f0f0e;
+  --bg-secondary: #161614;
+  --bg-card: #1c1c1a;
+  --bg-card-rgb: 28, 28, 26;
+  --text-primary: #f0efec;
+  --text-secondary: #a1a096;
+  --text-muted: #6e6d62;
+  --accent: #8B7CF6; /* Lighter, more saturated purple for dark mode */
+  --accent-hover: #9D8FF8;
+  --accent-light: #252433;
+  --border: #2a2a28;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.5);
+
+  /* Specific Dark Mode Category Colors (more saturated) */
+  --cat-prog-dark: #3b82f6;
+  --cat-spirit-dark: #7C6FD4;
+  --cat-spirit-bg-dark: #3D3580;
+  --cat-general-dark: #F0A500;
+  --cat-general-bg-dark: #3D2E00;
+}

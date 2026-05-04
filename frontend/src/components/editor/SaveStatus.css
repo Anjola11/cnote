@@ -1,0 +1,25 @@
+.save-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.save-status__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+.save-status--unsaved {
+  color: var(--text-muted);
+}
+.save-status--saving {
+  color: var(--accent);
+}
+.save-status--saved {
+  color: var(--success);
+}
+.save-status--error {
+  color: var(--danger);
+}

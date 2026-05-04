@@ -1,0 +1,6 @@
+.spinner {
+  color: var(--accent);
+}
+.spinner--sm { font-size: 14px; }
+.spinner--md { font-size: 20px; }
+.spinner--lg { font-size: 32px; }

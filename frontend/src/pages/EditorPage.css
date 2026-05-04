@@ -1,0 +1,62 @@
+.editor-page {
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.editor-page__actions {
+  position: fixed;
+  top: 64px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 10;
+}
+@media (min-width: 768px) {
+  .editor-page__actions { right: 24px; }
+}
+.editor-page__delete {
+  color: var(--danger) !important;
+}
+
+.editor-page__main {
+  max-width: 740px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 76px 16px 40px;
+}
+@media (min-width: 768px) {
+  .editor-page__main { padding: 80px 16px 60px; }
+}
+
+.editor-page__title {
+  display: block;
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--font-heading);
+  font-size: 24px;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+.editor-page__title::placeholder {
+  color: var(--text-muted);
+}
+@media (min-width: 768px) {
+  .editor-page__title { font-size: 32px; }
+}
+
+.editor-page__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.editor-page__meta-dot {
+  color: var(--text-muted);
+}
+.editor-page__meta-saved {
+  font-size: 13px;
+  color: var(--text-muted);
+}
