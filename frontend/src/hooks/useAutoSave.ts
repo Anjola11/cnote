@@ -1,6 +1,5 @@
 import { useRef, useEffect, useCallback } from 'react';
 import type { SaveStatus } from '../types';
-import { useAuth } from '../context/AuthContext';
 import { usePatchEntry } from './useEntries';
 
 export function useAutoSave(
@@ -10,7 +9,6 @@ export function useAutoSave(
 ) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const patchEntry = usePatchEntry();
-  const { isDemo } = useAuth();
   const isFirstRender = useRef(true);
 
   const save = useCallback(async (contentToSave: object) => {
@@ -48,7 +46,7 @@ export function useAutoSave(
         clearTimeout(timerRef.current);
       }
     };
-  }, [content, save, setSaveStatus, isDemo]);
+  }, [content, save, setSaveStatus]);
 
   // Cleanup on unmount
   useEffect(() => {

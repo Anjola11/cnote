@@ -1,12 +1,19 @@
 .code-block {
   position: relative !important;
-  margin: 1.5rem 0 !important;
+  margin: 2rem 0 !important;
   background: #1e1e1e !important;
-  border-radius: 8px !important;
-  overflow: visible !important; /* Changed from hidden to ensure selector dropdown works */
+  border-radius: 12px !important;
+  overflow: visible !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3) !important;
   display: block !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+@media (max-width: 799px) {
+  .code-block {
+    border-radius: 8px !important;
+  }
 }
 
 .code-block__header {
@@ -15,7 +22,7 @@
   justify-content: space-between !important;
   padding: 8px 16px !important;
   background: #252526 !important; /* Slightly lighter than the box */
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
   min-height: 36px !important;
   border-top-left-radius: 8px !important;
   border-top-right-radius: 8px !important;
@@ -47,6 +54,22 @@
   text-transform: none;
 }
 
+.code-block__language-label {
+  color: #8B7CF6;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 4px;
+}
+
+.code-block__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .code-block__copy {
   display: flex;
   align-items: center;
@@ -71,14 +94,57 @@
   font-weight: 500;
 }
 
+.code-block__delete {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.code-block__delete:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
 .code-block pre {
   margin: 0;
   padding: 1.25rem 1rem;
   background: transparent !important;
+  border: none !important;
   font-family: 'Fira Code', 'JetBrains Mono', 'Courier New', monospace;
   font-size: 14px;
   line-height: 1.6;
-  overflow-x: auto;
+  overflow: auto;
+  max-height: 500px;
+  min-height: 60px;
+}
+
+/* Custom scrollbar for code blocks */
+.code-block pre::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.code-block pre::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.code-block pre::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  border: 2px solid rgba(0, 0, 0, 0.2);
+}
+
+.code-block pre::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .code-block .code-content {

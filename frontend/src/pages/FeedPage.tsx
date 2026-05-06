@@ -11,10 +11,10 @@ import type { Category } from '../types';
 import Logo from '../components/ui/Logo';
 import './FeedPage.css';
 
-const CATEGORY_OPTIONS: { value: Category; icon: string; color: string; title: string; sub: string }[] = [
-  { value: 'programming', icon: 'fa-solid fa-code', color: 'var(--cat-prog)', title: 'Programming', sub: 'Code snippets, technical notes, dev logs.' },
-  { value: 'spiritual', icon: 'fa-solid fa-book-bible', color: 'var(--cat-spirit)', title: 'Spiritual', sub: 'Reflections, devotionals, scripture notes.' },
-  { value: 'general', icon: 'fa-solid fa-feather', color: 'var(--cat-general)', title: 'General', sub: 'Thoughts, plans, life notes.' },
+const CATEGORY_OPTIONS: { value: Category; icon: string; title: string; sub: string }[] = [
+  { value: 'programming', icon: 'fa-solid fa-code', title: 'Programming', sub: 'Code snippets, technical notes, dev logs.' },
+  { value: 'spiritual', icon: 'fa-solid fa-book-bible', title: 'Spiritual', sub: 'Reflections, devotionals, scripture notes.' },
+  { value: 'general', icon: 'fa-solid fa-feather', title: 'General', sub: 'Thoughts, plans, life notes.' },
 ];
 
 export default function FeedPage() {
@@ -53,15 +53,11 @@ export default function FeedPage() {
 
     filteredEntries.forEach(entry => {
       const date = parseISO(entry.updated_at);
-      let label = '';
-
-      if (isToday(date)) {
-        label = 'Today';
-      } else if (isYesterday(date)) {
-        label = 'Yesterday';
-      } else {
-        label = format(date, 'MMMM d, yyyy');
-      }
+      const label = isToday(date)
+        ? 'Today'
+        : isYesterday(date)
+          ? 'Yesterday'
+          : format(date, 'MMMM d, yyyy');
 
       if (!groups[label]) groups[label] = [];
       groups[label].push(entry);
@@ -104,8 +100,9 @@ export default function FeedPage() {
 
   const handleDelete = () => {
     if (showDeleteModal) {
-      deleteEntry.mutate(showDeleteModal);
+      const id = showDeleteModal;
       setShowDeleteModal(null);
+      deleteEntry.mutate(id);
     }
   };
 
@@ -123,7 +120,12 @@ export default function FeedPage() {
           size="md"
           icon="fa-solid fa-plus"
           fullWidth
-          onClick={() => setShowNewModal(true)}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            (e.currentTarget as HTMLButtonElement).blur();
+            setShowNewModal(true);
+          }}
         >
           New Entry
         </Button>
@@ -161,10 +163,10 @@ export default function FeedPage() {
           <div className="feed-grid">
             {[1, 2, 3, 4, 5, 6].map(i => (
               <div key={i} className="card feed-skeleton">
-                <div className="skeleton" style={{ width: 80, height: 22, marginBottom: 12 }} />
-                <div className="skeleton" style={{ width: '80%', height: 20, marginBottom: 8 }} />
-                <div className="skeleton" style={{ width: '100%', height: 14, marginBottom: 6 }} />
-                <div className="skeleton" style={{ width: '60%', height: 14 }} />
+                <div className="skeleton feed-skeleton__line feed-skeleton__line--badge" />
+                <div className="skeleton feed-skeleton__line feed-skeleton__line--title" />
+                <div className="skeleton feed-skeleton__line feed-skeleton__line--body" />
+                <div className="skeleton feed-skeleton__line feed-skeleton__line--body-short" />
               </div>
             ))}
           </div>
@@ -203,7 +205,12 @@ export default function FeedPage() {
                 variant="primary"
                 size="md"
                 icon="fa-solid fa-plus"
-                onClick={() => setShowNewModal(true)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  (e.currentTarget as HTMLButtonElement).blur();
+                  setShowNewModal(true);
+                }}
               >
                 New Entry
               </Button>
@@ -216,23 +223,37 @@ export default function FeedPage() {
       <button
         ref={fabRef}
         className="feed-fab"
-        onClick={() => setShowNewModal(true)}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          (e.currentTarget as HTMLButtonElement).blur();
+          setShowNewModal(true);
+        }}
         aria-label="New entry"
-        style={{ transform: 'scale(0)' }}
       >
         <i className="fa-solid fa-plus" />
       </button>
 
       {/* New Entry Modal */}
-      <Modal isOpen={showNewModal} onClose={() => setShowNewModal(false)} title="What kind of entry?">
+      <Modal
+        isOpen={showNewModal}
+        onClose={() => {
+          setShowNewModal(false);
+        }}
+        title="What kind of entry?"
+      >
         <div className="feed-new-modal__options">
           {CATEGORY_OPTIONS.map(opt => (
             <button
               key={opt.value}
               className="feed-new-modal__option"
-              onClick={() => handleCreate(opt.value)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleCreate(opt.value);
+              }}
             >
-              <div className="feed-new-modal__option-icon" style={{ background: opt.color + '1a', color: opt.color }}>
+              <div className={`feed-new-modal__option-icon feed-new-modal__option-icon--${opt.value}`}>
                 <i className={opt.icon} />
               </div>
               <div className="feed-new-modal__option-text">
@@ -245,12 +266,29 @@ export default function FeedPage() {
       </Modal>
 
       {/* Delete Confirm Modal */}
-      <Modal isOpen={!!showDeleteModal} onClose={() => setShowDeleteModal(null)} title="Delete entry?">
-        <p style={{ color: 'var(--text-secondary)', marginBottom: 20, fontSize: 14 }}>
+      <Modal
+        isOpen={!!showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(null);
+        }}
+        title="Delete entry?"
+      >
+        <p className="feed-page__delete-modal-text">
           This cannot be undone. The entry and all its content will be permanently deleted.
         </p>
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          <Button variant="ghost" size="md" onClick={() => setShowDeleteModal(null)}>Cancel</Button>
+        <div className="feed-page__delete-modal-actions">
+          <Button
+            variant="ghost"
+            size="md"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              (e.currentTarget as HTMLButtonElement).blur();
+              setShowDeleteModal(null);
+            }}
+          >
+            Cancel
+          </Button>
           <Button variant="danger" size="md" onClick={handleDelete} loading={deleteEntry.isPending}>Delete</Button>
         </div>
       </Modal>

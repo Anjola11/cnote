@@ -39,7 +39,12 @@ export default function EntryCard({ entry, onDelete }: EntryCardProps) {
         </button>
         <button
           className="entry-card__action entry-card__action--danger"
-          onClick={() => onDelete(entry.id)}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            (e.currentTarget as HTMLButtonElement).blur();
+            onDelete(entry.id);
+          }}
           aria-label="Delete entry"
         >
           <i className="fa-solid fa-trash" />

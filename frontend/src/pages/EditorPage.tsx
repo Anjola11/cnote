@@ -27,21 +27,19 @@ export default function EditorPage() {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showScriptureModal, setShowScriptureModal] = useState(false);
-  // Use state (not ref) so Toolbar re-renders when editor becomes available
   const [editorInstance, setEditorInstance] = useState<Editor | null>(null);
   const titleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const titleInitialized = useRef(false);
 
-  // Initialize from entry data
   useEffect(() => {
-    if (entry) {
+    if (entry && !titleInitialized.current) {
       setTitle(entry.title);
+      titleInitialized.current = true;
     }
   }, [entry]);
 
-  // Autosave content
   useAutoSave(id!, content, setSaveStatus);
 
-  // Title debounce save
   const handleTitleChange = useCallback((newTitle: string) => {
     setTitle(newTitle);
     if (titleTimerRef.current) clearTimeout(titleTimerRef.current);
@@ -63,27 +61,19 @@ export default function EditorPage() {
   const handleScriptureInsert = useCallback((verse: ScriptureVerse) => {
     if (!editorInstance) return;
     editorInstance.chain().focus().insertContent({
-      type: 'blockquote',
-      content: [
-        {
-          type: 'paragraph',
-          content: [
-            { type: 'text', text: `📖 ${verse.reference} (${verse.translation})`, marks: [{ type: 'bold' }] },
-          ],
-        },
-        {
-          type: 'paragraph',
-          content: [
-            { type: 'text', text: `"${verse.text}"`, marks: [{ type: 'italic' }] },
-          ],
-        },
-      ],
+      type: 'scripture',
+      attrs: {
+        reference: verse.reference,
+        translation: verse.translation,
+        text: verse.text,
+      },
     }).run();
   }, [editorInstance]);
 
   const handleDelete = () => {
-    deleteEntry.mutate(id!);
     setShowDeleteModal(false);
+    deleteEntry.mutate(id!);
+    // No editor focus call here — deleteEntry redirects to /feed
   };
 
   if (isLoading || !entry) {
@@ -103,13 +93,15 @@ export default function EditorPage() {
           size="sm"
           icon="fa-solid fa-trash"
           className="editor-page__delete"
-          onClick={() => setShowDeleteModal(true)}
+          onClickCapture={(e) => {
+            e.stopPropagation();
+            setShowDeleteModal(true);
+          }}
           aria-label="Delete entry"
         />
       </div>
 
       <main className="editor-page__main">
-        {/* Title */}
         <input
           type="text"
           className="editor-page__title"
@@ -118,21 +110,18 @@ export default function EditorPage() {
           placeholder="Untitled"
         />
 
-        {/* Metadata row */}
         <div className="editor-page__meta">
           <Badge category={entry.category as Category} />
           <span className="editor-page__meta-dot">·</span>
           <span className="editor-page__meta-saved">Saved {lastSaved}</span>
         </div>
 
-        {/* Toolbar */}
         <Toolbar
           editor={editorInstance}
           category={entry.category as Category}
           onScriptureClick={() => setShowScriptureModal(true)}
         />
 
-        {/* Rich editor */}
         <RichEditor
           content={entry.content}
           onUpdate={setContent}
@@ -140,18 +129,35 @@ export default function EditorPage() {
         />
       </main>
 
-      {/* Delete confirm modal */}
-      <Modal isOpen={showDeleteModal} onClose={() => setShowDeleteModal(false)} title="Delete this entry?">
-        <p style={{ color: 'var(--text-secondary)', marginBottom: 20, fontSize: 14 }}>
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        title="Delete this entry?"
+      >
+        <p className="editor-page__delete-modal-text">
           This cannot be undone. The entry and all its content will be permanently deleted.
         </p>
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          <Button variant="ghost" size="md" onClick={() => setShowDeleteModal(false)}>Cancel</Button>
-          <Button variant="danger" size="md" onClick={handleDelete} loading={deleteEntry.isPending}>Delete</Button>
+        <div className="editor-page__delete-modal-actions">
+          <Button
+            variant="ghost"
+            size="md"
+            type="button"
+            onClick={() => setShowDeleteModal(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            size="md"
+            type="button"
+            onClick={handleDelete}
+            loading={deleteEntry.isPending}
+          >
+            Delete
+          </Button>
         </div>
       </Modal>
 
-      {/* Scripture modal */}
       <ScriptureBlock
         isOpen={showScriptureModal}
         onClose={() => setShowScriptureModal(false)}

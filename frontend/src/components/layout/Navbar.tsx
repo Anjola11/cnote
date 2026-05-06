@@ -56,7 +56,12 @@ export default function Navbar() {
           <div className="navbar__avatar-wrapper">
             <button
               className="navbar__avatar"
-              onClick={() => setDropdownOpen(!dropdownOpen)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                (e.currentTarget as HTMLButtonElement).blur();
+                setDropdownOpen(!dropdownOpen);
+              }}
               aria-label="User menu"
             >
               {initials}

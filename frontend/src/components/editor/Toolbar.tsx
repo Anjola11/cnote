@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect, forwardRef } from 'react';
+import { createPortal } from 'react-dom';
 import type { Editor } from '@tiptap/react';
 import type { Category } from '../../types';
 import './Toolbar.css';
@@ -9,23 +10,108 @@ interface ToolbarProps {
   onScriptureClick?: () => void;
 }
 
-const PRESET_COLORS = ['#111110', '#DC2626', '#F97316', '#EAB308', '#16A34A', '#2563EB', '#7C3AED', '#EC4899'];
+const PRESET_COLORS = [
+  { value: '#111110', className: 'toolbar__color-swatch--ink' },
+  { value: '#DC2626', className: 'toolbar__color-swatch--red' },
+  { value: '#F97316', className: 'toolbar__color-swatch--orange' },
+  { value: '#EAB308', className: 'toolbar__color-swatch--yellow' },
+  { value: '#16A34A', className: 'toolbar__color-swatch--green' },
+  { value: '#2563EB', className: 'toolbar__color-swatch--blue' },
+  { value: '#7C3AED', className: 'toolbar__color-swatch--violet' },
+  { value: '#EC4899', className: 'toolbar__color-swatch--pink' },
+];
 
 /* ── helper sub-components (defined OUTSIDE the parent to keep stable identity) ── */
 
-function ToolBtn({ active, onClick, children, title }: {
-  active?: boolean; onClick: () => void; children: React.ReactNode; title: string;
-}) {
-  return (
-    <button
-      className={`toolbar__btn ${active ? 'toolbar__btn--active' : ''}`}
-      onClick={onClick}
-      title={title}
-      aria-label={title}
-      type="button"
+const ToolBtn = forwardRef<HTMLButtonElement, { active?: boolean; onClick: () => void; children: React.ReactNode; title: string; }>(
+  ({ active, onClick, children, title }, ref) => {
+    return (
+      <button
+        ref={ref}
+        className={`toolbar__btn ${active ? 'toolbar__btn--active' : ''}`}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          (e.currentTarget as HTMLButtonElement).blur();
+          onClick();
+        }}
+        title={title}
+        aria-label={title}
+        type="button"
+      >
+        {children}
+      </button>
+    );
+  }
+);
+
+function ToolbarPopover({ children, anchorRef, onClose }: { children: React.ReactNode, anchorRef: React.RefObject<HTMLElement | null>, onClose: () => void }) {
+  const [pos, setPos] = useState({ top: 0, left: 0, placement: 'bottom' as 'top' | 'bottom' });
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const updatePosition = () => {
+      if (anchorRef.current) {
+        const rect = anchorRef.current.getBoundingClientRect();
+        const isMobile = window.innerWidth <= 768;
+        
+        // Ensure popover doesn't go off screen horizontally
+        const popoverWidth = 200; // estimated
+        let left = rect.left;
+        if (left + popoverWidth > window.innerWidth - 10) {
+          left = window.innerWidth - popoverWidth - 10;
+        }
+        if (left < 10) left = 10;
+
+        if (isMobile) {
+          setPos({
+            top: rect.top - 8,
+            left,
+            placement: 'top'
+          });
+        } else {
+          setPos({
+            top: rect.bottom + 8,
+            left,
+            placement: 'bottom'
+          });
+        }
+      }
+    };
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node) &&
+          anchorRef.current && !anchorRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [anchorRef, onClose]);
+
+  useEffect(() => {
+    if (!popoverRef.current) return;
+    popoverRef.current.style.top = `${pos.top}px`;
+    popoverRef.current.style.left = `${pos.left}px`;
+  }, [pos.top, pos.left]);
+
+  return createPortal(
+    <div 
+      ref={popoverRef}
+      className={`toolbar__popover-portal toolbar__popover-portal--${pos.placement}`}
     >
       {children}
-    </button>
+    </div>,
+    document.body
   );
 }
 
@@ -36,6 +122,10 @@ export default function Toolbar({ editor, category, onScriptureClick }: ToolbarP
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [showLangPicker, setShowLangPicker] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
+
+  const linkBtnRef = useRef<HTMLButtonElement>(null);
+  const colorBtnRef = useRef<HTMLButtonElement>(null);
+  const langBtnRef = useRef<HTMLButtonElement>(null);
 
   const applyLink = useCallback(() => {
     if (!editor) return;
@@ -87,6 +177,7 @@ export default function Toolbar({ editor, category, onScriptureClick }: ToolbarP
       {/* Link */}
       <div className="toolbar__link-wrapper">
         <ToolBtn
+          ref={linkBtnRef}
           active={editor.isActive('link')}
           onClick={() => {
             if (editor.isActive('link')) {
@@ -100,47 +191,50 @@ export default function Toolbar({ editor, category, onScriptureClick }: ToolbarP
           <i className="fa-solid fa-link" />
         </ToolBtn>
         {showLinkInput && (
-          <div className="toolbar__link-popover">
-            <input
-              type="url"
-              placeholder="https://example.com"
-              value={linkUrl}
-              onChange={e => setLinkUrl(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') applyLink(); if (e.key === 'Escape') setShowLinkInput(false); }}
-              className="toolbar__link-input"
-              autoFocus
-            />
-            <button className="toolbar__link-apply" onClick={applyLink} type="button">
-              <i className="fa-solid fa-check" />
-            </button>
-          </div>
+          <ToolbarPopover anchorRef={linkBtnRef} onClose={() => setShowLinkInput(false)}>
+            <div className="toolbar__link-popover">
+              <input
+                type="url"
+                placeholder="https://example.com"
+                value={linkUrl}
+                onChange={e => setLinkUrl(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') applyLink(); if (e.key === 'Escape') setShowLinkInput(false); }}
+                className="toolbar__link-input"
+                autoFocus
+              />
+              <button className="toolbar__link-apply" onClick={applyLink} type="button" title="Apply link" aria-label="Apply link">
+                <i className="fa-solid fa-check" />
+              </button>
+            </div>
+          </ToolbarPopover>
         )}
       </div>
 
       {/* Color picker */}
       <div className="toolbar__color-wrapper">
-        <ToolBtn active={false} onClick={() => setShowColorPicker(!showColorPicker)} title="Text Color">
+        <ToolBtn ref={colorBtnRef} active={false} onClick={() => setShowColorPicker(!showColorPicker)} title="Text Color">
           <i className="fa-solid fa-palette" />
         </ToolBtn>
         {showColorPicker && (
-          <div className="toolbar__color-popover">
-            {PRESET_COLORS.map(c => (
-              <button
-                key={c}
-                className="toolbar__color-swatch"
-                style={{ background: c }}
-                onClick={() => { editor.chain().focus().setColor(c).run(); setShowColorPicker(false); }}
-                aria-label={`Color ${c}`}
-                type="button"
+          <ToolbarPopover anchorRef={colorBtnRef} onClose={() => setShowColorPicker(false)}>
+            <div className="toolbar__color-popover">
+              {PRESET_COLORS.map(c => (
+                <button
+                  key={c.value}
+                  className={`toolbar__color-swatch ${c.className}`}
+                  onClick={() => { editor.chain().focus().setColor(c.value).run(); setShowColorPicker(false); }}
+                  aria-label={`Color ${c.value}`}
+                  type="button"
+                />
+              ))}
+              <input
+                type="color"
+                className="toolbar__color-native"
+                onChange={e => { editor.chain().focus().setColor(e.target.value).run(); setShowColorPicker(false); }}
+                title="Custom color"
               />
-            ))}
-            <input
-              type="color"
-              className="toolbar__color-native"
-              onChange={e => { editor.chain().focus().setColor(e.target.value).run(); setShowColorPicker(false); }}
-              title="Custom color"
-            />
-          </div>
+            </div>
+          </ToolbarPopover>
         )}
       </div>
 
@@ -171,6 +265,7 @@ export default function Toolbar({ editor, category, onScriptureClick }: ToolbarP
       {category === 'programming' && (
         <div className="toolbar__lang-wrapper">
           <ToolBtn
+            ref={langBtnRef}
             active={editor.isActive('codeBlock')}
             onClick={() => {
               if (editor.isActive('codeBlock')) {
@@ -184,31 +279,33 @@ export default function Toolbar({ editor, category, onScriptureClick }: ToolbarP
             <i className="fa-solid fa-terminal" />
           </ToolBtn>
           {showLangPicker && (
-            <div className="toolbar__lang-popover">
-              {['javascript', 'typescript', 'python', 'html', 'css', 'sql'].map(lang => (
+            <ToolbarPopover anchorRef={langBtnRef} onClose={() => setShowLangPicker(false)}>
+              <div className="toolbar__lang-popover">
+                {['javascript', 'typescript', 'rust', 'go', 'python', 'cpp', 'csharp', 'verilog', 'vhdl', 'x86asm'].map(lang => (
+                  <button
+                    key={lang}
+                    className="toolbar__lang-option"
+                    onClick={() => {
+                      editor.chain().focus().toggleCodeBlock({ language: lang }).run();
+                      setShowLangPicker(false);
+                    }}
+                    type="button"
+                  >
+                    {lang}
+                  </button>
+                ))}
                 <button
-                  key={lang}
                   className="toolbar__lang-option"
                   onClick={() => {
-                    editor.chain().focus().toggleCodeBlock({ language: lang }).run();
+                    editor.chain().focus().toggleCodeBlock().run();
                     setShowLangPicker(false);
                   }}
                   type="button"
                 >
-                  {lang}
+                  auto
                 </button>
-              ))}
-              <button
-                className="toolbar__lang-option"
-                onClick={() => {
-                  editor.chain().focus().toggleCodeBlock().run();
-                  setShowLangPicker(false);
-                }}
-                type="button"
-              >
-                auto
-              </button>
-            </div>
+              </div>
+            </ToolbarPopover>
           )}
         </div>
       )}

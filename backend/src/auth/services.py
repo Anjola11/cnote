@@ -1,0 +1,592 @@
+from sqlmodel import select, desc
+from src.auth.models import User, SignupOtp, ForgotPasswordOtp
+from src.auth.schemas import (
+    UserCreateInput, VerifyOtpInput, UserLoginInput, ForgotPasswordInput, 
+    ResetPasswordInput, RenewAccessTokenInput, ResendOtpInput, LogoutInput, OtpTypes
+)
+from sqlmodel.ext.asyncio.session import AsyncSession
+from fastapi import HTTPException, status, Response, BackgroundTasks, Request
+from src.utils.logger import logger
+from src.utils.auth import generate_password_hash, verify_password_hash, create_token, decode_token, TokenType
+from datetime import datetime, timezone, timedelta
+import uuid
+from src.db.redis import redis_client
+from src.emailServices.main import EmailServices
+from src.config import Config
+
+email_services = EmailServices()
+
+# Token expiration configurations
+access_token_expiry = timedelta(hours=2)
+refresh_token_expiry = timedelta(days=3)
+
+cookie_settings = {
+    "httponly": True,
+    "secure": Config.IS_PRODUCTION,
+    "samesite": "none" if Config.IS_PRODUCTION else "lax"
+}
+
+class AuthServices:
+    def _origin_host(self, request: Request | None) -> str | None:
+        if not request:
+            return None
+
+        origin = request.headers.get("origin")
+        if not origin:
+            return None
+
+        try:
+            from urllib.parse import urlparse
+
+            return (urlparse(origin).hostname or "").lower() or None
+        except Exception:
+            return None
+
+    def _request_host(self, request: Request | None) -> str | None:
+        if not request:
+            return None
+        return (request.url.hostname or "").lower() or None
+
+    def _is_local_host(self, host: str | None) -> bool:
+        return host in {"localhost", "127.0.0.1", "::1"}
+
+    def _build_cookie_settings(self, request: Request | None = None) -> dict:
+        request_host = self._request_host(request)
+        origin_host = self._origin_host(request)
+
+        same_origin = (
+            request_host is not None
+            and origin_host is not None
+            and request_host == origin_host
+        )
+        both_local = self._is_local_host(request_host) and self._is_local_host(origin_host)
+
+        if Config.IS_PRODUCTION or (origin_host and request_host and not same_origin and not both_local):
+            return {
+                "httponly": True,
+                "secure": True,
+                "samesite": "none",
+                "path": "/",
+            }
+
+        return {
+            "httponly": True,
+            "secure": False,
+            "samesite": "lax",
+            "path": "/",
+        }
+
+    def _set_auth_cookies(
+        self,
+        *,
+        response: Response,
+        access_token: str,
+        refresh_token: str,
+        request: Request | None = None,
+    ) -> None:
+        settings = self._build_cookie_settings(request)
+        response.set_cookie(
+            key="access_token",
+            value=access_token,
+            **settings,
+            max_age=int(access_token_expiry.total_seconds())
+        )
+        response.set_cookie(
+            key="refresh_token",
+            value=refresh_token,
+            **settings,
+            max_age=int(refresh_token_expiry.total_seconds())
+        )
+
+    def _clear_auth_cookies(self, *, response: Response, request: Request | None = None) -> None:
+        settings = self._build_cookie_settings(request)
+        response.delete_cookie(
+            key="access_token",
+            httponly=settings["httponly"],
+            samesite=settings["samesite"],
+            secure=settings["secure"],
+            path=settings["path"],
+        )
+        response.delete_cookie(
+            key="refresh_token",
+            httponly=settings["httponly"],
+            samesite=settings["samesite"],
+            secure=settings["secure"],
+            path=settings["path"],
+        )
+
+    async def get_user(self, email:str, session:AsyncSession, return_data: bool):
+        
+        statement = select(User).where(User.email == email.lower())
+        result = await session.exec(statement)
+        user = result.first()
+        
+        if user:
+            if return_data:
+                return user
+            logger.warning(f"Conflict: Account with email {email} already exists")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail = f"An account with these details already exists"
+            )
+        return None
+
+    async def create_user(
+        self,
+        userInput: UserCreateInput,
+        session: AsyncSession,
+        background_tasks: BackgroundTasks,
+        response: Response,
+        request: Request | None = None,
+    ):
+        # Verify user doesn't already exist
+        await self.get_user(userInput.email, session, return_data=False)
+        
+        # Hash password before storing (strip to prevent accidental whitespace issues)
+        hashed_password = generate_password_hash(userInput.password.strip())
+
+        # Create new user instance
+        new_user = User(
+            email=userInput.email,
+            password_hash=hashed_password,
+        )
+
+        try:
+            session.add(new_user)
+            await session.commit()
+            await session.refresh(new_user)
+
+            # Generate tokens for cookie-based auth
+            user_payload = {
+                "sub": str(new_user.id),
+                "email": new_user.email,
+                "plan": new_user.plan.value if new_user.plan else None
+                
+            }
+            access_token = create_token(user_payload, token_type="access")
+            refresh_token = create_token(user_payload, token_type="refresh")
+            
+            otp_record = await email_services.save_otp(new_user.uid, session, type=OtpTypes.SIGNUP)
+            
+            background_tasks.add_task(
+                email_services.send_email_verification_otp, 
+                userInput.email, 
+                otp_record.otp
+            )
+
+            self._set_auth_cookies(
+                response=response,
+                access_token=access_token,
+                refresh_token=refresh_token,
+                request=request,
+            )
+            
+            return {
+                "uid": str(new_user.uid),
+                "email": new_user.email,
+                "is_verified": new_user.is_verified,
+            }
+
+        except Exception as e:
+            logger.error(f"Error creating user: {e}")
+            await session.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error"
+            )
+    
+    async def verify_otp(
+        self,
+        otp_input: VerifyOtpInput,
+        session: AsyncSession,
+        background_tasks: BackgroundTasks,
+        response: Response | None = None,
+        request: Request | None = None,
+    ):
+        """Verify a user's OTP and activate their account."""
+        
+        model = SignupOtp if otp_input.otp_type == OtpTypes.SIGNUP else ForgotPasswordOtp
+        
+        # Retrieve the most recent OTP record for this user
+        otp_statement = (select(model)
+                       .where(model.uid == otp_input.uid)
+                       .order_by(desc(model.created_at)))
+        
+        result = await session.exec(otp_statement)
+        latest_otp_record = result.first()
+
+        # Validate OTP record exists
+        if not latest_otp_record:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, 
+                detail="No OTP found for this user"
+            )
+        
+        # Validate OTP code matches
+        if latest_otp_record.otp != otp_input.otp:
+            latest_otp_record.attempts += 1
+            if latest_otp_record.attempts >= latest_otp_record.max_attempts:  
+                await session.delete(latest_otp_record)
+                await session.commit()
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, 
+                    detail="OTP expired due to too many failed attempts"
+                )
+            
+            await session.commit()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, 
+                detail=f"Invalid OTP. {latest_otp_record.max_attempts - latest_otp_record.attempts} attempts remaining"
+            )
+
+        # Check if OTP has expired
+        if datetime.now(timezone.utc) > latest_otp_record.expires:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="OTP expired, please request a new one"
+            )
+        
+        if otp_input.otp_type == OtpTypes.SIGNUP:
+            user_statement = select(User).where(User.uid == otp_input.uid)
+            result = await session.exec(user_statement)
+            user = result.first()
+
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND, 
+                    detail="User not found"
+                )
+        
+            try:
+                user.is_verified = True
+                session.add(user)
+                await session.delete(latest_otp_record)
+                await session.commit()
+                await session.refresh(user)
+
+                background_tasks.add_task(
+                    email_services.send_welcome_email,
+                    user.email
+                )
+
+                if response is not None:
+                    user_dict = user.model_dump()
+                    access_token = create_token(user_dict, token_type="access")
+                    refresh_token = create_token(user_dict, token_type="refresh")
+                    self._set_auth_cookies(
+                        response=response,
+                        access_token=access_token,
+                        refresh_token=refresh_token,
+                        request=request,
+                    )
+
+                return {
+                    "uid": str(user.uid),
+                    "email": user.email,
+                    "is_verified": user.is_verified,
+                }
+
+            except Exception as e:
+                logger.error(f"Error validating otp user logic: {e}")
+                await session.rollback()
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Internal server error"
+                )
+        
+        elif otp_input.otp_type == OtpTypes.FORGOTPASSWORD:
+            try:
+                await session.delete(latest_otp_record)
+                await session.commit()
+
+                token_data = {"uid": str(latest_otp_record.uid)}
+                reset_password_token = create_token(token_data, token_type=TokenType.RESET)
+                
+                return {
+                    "uid": str(latest_otp_record.uid),
+                    "reset_token": reset_password_token,
+                }
+            except Exception as e:
+                logger.error(f"Error removing forgotpassword otp: {e}")
+                await session.rollback()
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Internal server error"
+                )
+        
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid OTP type provided"
+        )
+
+    async def resend_otp(self, resend_otp_input: ResendOtpInput, session: AsyncSession, background_tasks: BackgroundTasks):
+        """Resends an OTP to the user if applicable."""
+        
+        user = await self.get_user(resend_otp_input.email, session, True)
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User with this email does not exist"
+            )
+        
+        datetime_now = datetime.now(timezone.utc)
+
+        if resend_otp_input.otp_type == OtpTypes.SIGNUP:
+            if user.is_verified:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="User is already verified. Please login."
+                )
+            
+            signup_otp_statement = select(SignupOtp).where(SignupOtp.uid == user.uid).order_by(
+                SignupOtp.created_at.desc()
+            )
+            result = await session.exec(signup_otp_statement)
+            signup_otp = result.first()
+
+            if signup_otp and signup_otp.expires > datetime_now:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You already requested for an otp, check your email"
+                )
+            
+            otp_record = await email_services.save_otp(user.uid, session, type =OtpTypes.SIGNUP)
+
+            background_tasks.add_task(
+                email_services.send_email_verification_otp, 
+                user.email, 
+                otp_record.otp
+            )
+            
+            return {"uid": str(user.uid)}
+
+        elif resend_otp_input.otp_type == OtpTypes.FORGOTPASSWORD:
+             
+            forgot_password_otp_statement = select(ForgotPasswordOtp).where(ForgotPasswordOtp.uid == user.uid).order_by(
+                ForgotPasswordOtp.created_at.desc()
+            )
+            result = await session.exec(forgot_password_otp_statement)
+            forgot_password_otp = result.first()
+
+            if forgot_password_otp and forgot_password_otp.expires > datetime_now:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You already requested for an otp, check your email"
+                )
+            
+            otp_record = await email_services.save_otp(user.uid, session, type =OtpTypes.FORGOTPASSWORD)
+
+            background_tasks.add_task(
+                email_services.send_forgot_password_otp, 
+                user.email, 
+                otp_record.otp
+            )
+            return {"uid": str(user.uid)}
+        
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid OTP type provided"
+        )
+            
+    async def login_user(
+        self,
+        loginInput: UserLoginInput,
+        session: AsyncSession,
+        response: Response,
+        request: Request | None = None,
+    ):
+        user = await self.get_user(loginInput.email, session, True)
+        
+        INVALID_CREDENTIALS = HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid Credentials"
+        )
+
+        if not user:
+            raise INVALID_CREDENTIALS
+        
+        if not user.is_verified:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Please verify your account before you can login. [UID:{user.uid}]"
+            )
+
+        # Verify password (strip to prevent accidental whitespace issues)
+        verified_password = verify_password_hash(loginInput.password.strip(), user.password_hash)
+
+        if not verified_password:
+            raise INVALID_CREDENTIALS
+
+        user_dict = user.model_dump()
+        access_token = create_token(user_dict, token_type="access")
+        refresh_token = create_token(user_dict, token_type="refresh")
+        
+        self._set_auth_cookies(
+            response=response,
+            access_token=access_token,
+            refresh_token=refresh_token,
+            request=request,
+        )
+
+        return {
+            'uid': str(user.uid),
+            'email': user.email,
+            'is_verified': user.is_verified,
+        }
+
+    async def forgot_password(self, forgot_password_input: ForgotPasswordInput, session: AsyncSession, background_tasks: BackgroundTasks):
+        user = await self.get_user(forgot_password_input.email, session, True)
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email is not registered"
+            ) 
+            
+        otp_record = await email_services.save_otp(user.uid, session, type=OtpTypes.FORGOTPASSWORD)
+        
+        background_tasks.add_task(
+            email_services.send_forgot_password_otp, 
+            user.email, 
+            otp_record.otp
+        )
+
+        return {"uid": str(user.uid)}
+    
+    async def reset_password(self, reset_password_input: ResetPasswordInput, session: AsyncSession):
+        token_decode = decode_token(reset_password_input.reset_token)
+
+        if token_decode.get('type') != "reset":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, 
+                detail="Invalid token type"
+            )
+
+        uid_from_token = token_decode.get('sub')
+
+        statement = select(User).where(User.uid == uuid.UUID(uid_from_token))
+        result = await session.exec(statement)
+        user = result.first()
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, 
+                detail="User not found"
+            )
+
+        new_hashed_password = generate_password_hash(reset_password_input.new_password.strip())
+        user.password_hash = new_hashed_password
+        user.is_verified = True  # Successful reset via OTP proves email ownership
+
+        try:
+            session.add(user)
+            await session.commit()
+            await session.refresh(user)
+            return {}
+        except Exception:
+            await session.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error"
+            )
+        
+    async def renew_access_token(
+        self,
+        old_refresh_token_str: str,
+        session: AsyncSession,
+        response: Response,
+        request: Request | None = None,
+    ):
+        old_refresh_token_decode = decode_token(old_refresh_token_str)
+
+        if old_refresh_token_decode.get('type') != "refresh":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, 
+                detail="Invalid token type"
+            )
+        
+        jti = old_refresh_token_decode.get('jti')
+        if await self.is_token_blacklisted(jti):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, 
+                detail="Refresh token reused. Login required."
+            )
+
+        uid = old_refresh_token_decode.get("sub") 
+        statement = select(User).where(User.uid == uuid.UUID(uid))
+        result = await session.exec(statement)
+        user = result.first()
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, 
+                detail="User not found"
+            )
+            
+        user_data = {"uid": user.uid, "email": user.email}
+
+        new_token = create_token(user_data, token_type="access")
+        await self.add_token_to_blocklist(old_refresh_token_str)
+        new_refresh_token = create_token(user_data, token_type="refresh")
+        
+        self._set_auth_cookies(
+            response=response,
+            access_token=new_token,
+            refresh_token=new_refresh_token,
+            request=request,
+        )
+
+        return {}
+    
+    async def add_token_to_blocklist(self, token):
+        token_decoded = decode_token(token)
+        token_id = token_decoded.get('jti')
+        exp_timestamp = token_decoded.get('exp')
+
+        current_time = datetime.now(timezone.utc).timestamp()
+        time_to_live = int(exp_timestamp - current_time)
+
+        if time_to_live > 0:
+            try:
+                await redis_client.setex(name=token_id, time=time_to_live, value="true")
+            except Exception as e:
+                logger.error(f"Redis error in add_token_to_blocklist: {e}")
+                pass
+        
+    async def is_token_blacklisted(self, jti: str) -> bool:
+        try:
+            result = await redis_client.get(jti)
+            return result is not None
+        except Exception as e:
+            logger.error(f"Redis error in is_token_blacklisted: {e}")
+            return False
+    
+    async def logout(
+        self,
+        response: Response,
+        access_token: str = None,
+        refresh_token: str = None,
+        request: Request | None = None,
+    ):
+        if access_token == None and refresh_token == None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Tokens missing"
+            )
+
+        if access_token:
+            await self.add_token_to_blocklist(access_token)
+        if refresh_token:
+            await self.add_token_to_blocklist(refresh_token)
+
+        self._clear_auth_cookies(response=response, request=request)
+        
+        return {}
+
+    async def get_me(self, current_user):
+        return {
+            "uid": str(current_user.uid),
+            "email": current_user.email,
+            "is_verified": current_user.is_verified,
+        }

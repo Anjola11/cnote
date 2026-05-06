@@ -60,3 +60,15 @@
   font-size: 13px;
   color: var(--text-muted);
 }
+
+.editor-page__delete-modal-text {
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+.editor-page__delete-modal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}

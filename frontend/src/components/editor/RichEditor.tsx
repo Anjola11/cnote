@@ -13,6 +13,7 @@ import vhdl from 'highlight.js/lib/languages/vhdl';
 import x86asm from 'highlight.js/lib/languages/x86asm';
 import { useEffect } from 'react';
 import CodeBlockComponent from './CodeBlockComponent';
+import { Scripture } from './ScriptureExtension';
 import './RichEditor.css';
 
 const lowlight = createLowlight(common);
@@ -37,6 +38,10 @@ export default function RichEditor({ content, onUpdate, onEditorReady }: RichEdi
     extensions: [
       StarterKit.configure({
         codeBlock: false,
+        // @ts-ignore
+        link: false,
+        // @ts-ignore
+        underline: false,
       }),
       Underline,
       TextStyle,
@@ -59,6 +64,7 @@ export default function RichEditor({ content, onUpdate, onEditorReady }: RichEdi
       CustomCodeBlock.configure({
         lowlight,
       }),
+      Scripture,
     ],
     content: content as any,
     onUpdate: ({ editor }) => {
@@ -67,6 +73,8 @@ export default function RichEditor({ content, onUpdate, onEditorReady }: RichEdi
     editorProps: {
       attributes: {
         class: 'rich-editor__prose',
+        'data-gramm': 'false',
+        spellcheck: 'false',
       },
     },
   });
@@ -78,7 +86,7 @@ export default function RichEditor({ content, onUpdate, onEditorReady }: RichEdi
   }, [editor, onEditorReady]);
 
   return (
-    <div className="rich-editor">
+    <div className="rich-editor" data-gramm="false" data-enable-grammarly="false">
       <EditorContent editor={editor} />
     </div>
   );
