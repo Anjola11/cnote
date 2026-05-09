@@ -1,20 +1,21 @@
-from sqlmodel import SQLModel, Field, Column
+from sqlmodel import SQLModel, Field, Column, Relationship
 import uuid
 from pydantic import EmailStr
 from enum import Enum
 import sqlalchemy.dialects.postgresql as pg
 from datetime import datetime, timezone, timedelta
 from typing import Optional
+from src.utils.utc_now import utc_now
+
 
 class Plan(str, Enum):
     BASIC = "basic"
     PRO = "pro"
 
-def utc_now():
-    return datetime.now(timezone.utc)
+
 
 class User(SQLModel, table=True):
-    __tablename__ = "user"
+    __tablename__ = "users"
 
     uid: uuid.UUID = Field(
         default_factory=uuid.uuid4,
@@ -45,6 +46,12 @@ class User(SQLModel, table=True):
     last_login_at: datetime = Field(
         default_factory=utc_now,
         sa_column=Column(pg.TIMESTAMP(timezone=True), index=True, nullable=False)
+    )
+
+    #relationship
+    notes: list["Note"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan", "primaryjoin": "User.uid == Note.uid"}
     )
 
 def get_expiry_time(minutes):
