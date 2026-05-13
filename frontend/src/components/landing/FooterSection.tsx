@@ -13,7 +13,7 @@ export default function FooterSection() {
           <a href="#" className="footer__link">Privacy</a>
           <a href="#" className="footer__link">Terms</a>
           <span className="footer__made">
-            Made by <a href="https://aanu-aladeniyi.vercel.app/" target="_blank" rel="noopener noreferrer" className="footer__credit-link">
+            Made by <a href="https://www.aladeniyiaanu.dev/" target="_blank" rel="noopener noreferrer" className="footer__credit-link">
               Aanu <i className="fa-solid fa-up-right-from-square footer__link-icon" />
             </a>
           </span>
