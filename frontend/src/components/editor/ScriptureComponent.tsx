@@ -7,6 +7,7 @@ import './ScriptureComponent.css';
 export default function ScriptureComponent({
   node: { attrs: { reference, translation, text } },
   deleteNode,
+  editor,
 }: NodeViewProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -17,19 +18,21 @@ export default function ScriptureComponent({
           <i className="fa-solid fa-book-bible scripture-block__icon" />
           <span className="scripture-block__ref">{reference} ({translation})</span>
         </div>
-        <button
-          className="scripture-block__delete"
-          type="button"
-          title="Remove scripture"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            (e.currentTarget as HTMLButtonElement).blur();
-            setShowDeleteConfirm(true);
-          }}
-        >
-          <i className="fa-solid fa-xmark" />
-        </button>
+        {editor.isEditable && (
+          <button
+            className="scripture-block__delete"
+            type="button"
+            title="Remove scripture"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              (e.currentTarget as HTMLButtonElement).blur();
+              setShowDeleteConfirm(true);
+            }}
+          >
+            <i className="fa-solid fa-xmark" />
+          </button>
+        )}
       </div>
 
       <div className="scripture-block__content">

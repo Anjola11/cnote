@@ -61,7 +61,8 @@ class User(SQLModel, table=True):
     @property
     def profile_picture_url(self) -> str:
         if not self.avatar_public_id:
-            return f"https://ui-avatars.com/api/?name={self.username}&background=random"
+            # Use brand colors: background #f5f3ff (light purple), color #4C3A94 (dark purple)
+            return f"https://ui-avatars.com/api/?name={self.username}&background=f5f3ff&color=4C3A94"
         
         url, options = cloudinary.utils.cloudinary_url(
             self.avatar_public_id,

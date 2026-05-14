@@ -19,12 +19,33 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   });
 
   useEffect(() => {
+    // Apply theme to document
     document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('cnote-theme', theme);
   }, [theme]);
 
+  useEffect(() => {
+    // Listen for system theme changes
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    
+    const handleSystemChange = (e: MediaQueryListEvent) => {
+      const stored = localStorage.getItem('cnote-theme');
+      // Only auto-update if the user hasn't manually overridden it in this session
+      // or if we want it to always follow system when no preference is saved.
+      if (!stored) {
+        setTheme(e.matches ? 'dark' : 'light');
+      }
+    };
+
+    mediaQuery.addEventListener('change', handleSystemChange);
+    return () => mediaQuery.removeEventListener('change', handleSystemChange);
+  }, []);
+
   const toggleTheme = useCallback(() => {
-    setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
+    setTheme(prev => {
+      const next = prev === 'light' ? 'dark' : 'light';
+      localStorage.setItem('cnote-theme', next);
+      return next;
+    });
   }, []);
 
   return (

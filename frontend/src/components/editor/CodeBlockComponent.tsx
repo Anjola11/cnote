@@ -57,7 +57,7 @@ export default function CodeBlockComponent({
           <span className="code-block__language-label">
             {LANGUAGES.find(l => l.value === defaultLanguage)?.label || defaultLanguage}
           </span>
-        ) : (
+        ) : editor.isEditable ? (
           <select
             className="code-block__language"
             value={defaultLanguage || 'null'}
@@ -68,25 +68,29 @@ export default function CodeBlockComponent({
               <option key={lang.value} value={lang.value}>{lang.label}</option>
             ))}
           </select>
+        ) : (
+          <span className="code-block__language-label">Auto</span>
         )}
         <div className="code-block__actions">
           <button className="code-block__copy" onClick={handleCopy} title="Copy code" type="button">
             <i className={isCopied ? "fa-solid fa-check" : "fa-regular fa-copy"} />
             <span>{isCopied ? 'Copied!' : ''}</span>
           </button>
-          <button
-            className="code-block__delete"
-            type="button"
-            title="Remove code block"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              (e.currentTarget as HTMLButtonElement).blur();
-              setShowDeleteConfirm(true);
-            }}
-          >
-            <i className="fa-solid fa-xmark" />
-          </button>
+          {editor.isEditable && (
+            <button
+              className="code-block__delete"
+              type="button"
+              title="Remove code block"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                (e.currentTarget as HTMLButtonElement).blur();
+                setShowDeleteConfirm(true);
+              }}
+            >
+              <i className="fa-solid fa-xmark" />
+            </button>
+          )}
         </div>
       </div>
 

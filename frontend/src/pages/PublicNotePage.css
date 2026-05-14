@@ -5,25 +5,12 @@
   flex-direction: column;
 }
 
-.public-note__nav {
-  padding: 16px 24px;
-  display: flex;
-  align-items: center;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-nav);
-}
-
-.public-note__brand {
-  text-decoration: none;
-  display: flex;
-  align-items: center;
-}
-
 .public-note__main {
   flex: 1;
   display: flex;
   justify-content: center;
   padding: 40px 20px;
+  margin-top: 56px; /* Offset for fixed navbar */
 }
 
 .public-note__article {
@@ -51,13 +38,15 @@
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: var(--bg-hover);
+  background: var(--accent-light);
+  color: var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 500;
-  color: var(--text-secondary);
+  font-weight: 700;
+  font-size: 1.1rem;
   overflow: hidden;
+  border: 1px solid rgba(var(--accent-rgb), 0.1);
 }
 
 .public-note__avatar img {
