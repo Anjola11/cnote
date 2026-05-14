@@ -1,0 +1,40 @@
+import { Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import Logo from '../ui/Logo';
+import Button from '../ui/Button';
+import './Navbar.css';
+
+export default function PublicNavbar() {
+  const { user, isLoading } = useAuth();
+
+  return (
+    <nav className="navbar">
+      <div className="navbar__inner">
+        <Link to="/" className="navbar__brand">
+          <Logo className="navbar__logo" />
+        </Link>
+
+        <div className="navbar__actions" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          {!isLoading && (
+            <>
+              {user ? (
+                <Link to="/feed">
+                  <Button variant="primary" size="sm" icon="fa-solid fa-house">Dashboard</Button>
+                </Link>
+              ) : (
+                <>
+                  <Link to="/login" className="hide-mobile">
+                    <Button variant="ghost" size="sm">Log in</Button>
+                  </Link>
+                  <Link to="/signup">
+                    <Button variant="primary" size="sm">Get Started</Button>
+                  </Link>
+                </>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </nav>
+  );
+}

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import ThemeToggle from '../components/ui/ThemeToggle';
+import PublicNavbar from '../components/layout/PublicNavbar';
 import Button from '../components/ui/Button';
 import HeroSection from '../components/landing/HeroSection';
 import FeaturesSection from '../components/landing/FeaturesSection';
@@ -32,46 +32,7 @@ export default function LandingPage() {
 
   return (
     <div className="landing">
-      <nav ref={navRef} className="landing-nav">
-        <div className="landing-nav__inner">
-          <Link to="/" className="landing-nav__brand">
-            <Logo className="landing-nav__logo" />
-          </Link>
-
-          <div className="landing-nav__right landing-nav__right--desktop">
-            <ThemeToggle />
-            <Link to="/login">
-              <Button variant="ghost" size="sm">Log in</Button>
-            </Link>
-            <Link to="/signup">
-              <Button variant="primary" size="sm">Get Started</Button>
-            </Link>
-          </div>
-
-          <div className="landing-nav__right landing-nav__right--mobile">
-            <ThemeToggle />
-            <button
-              className="landing-nav__hamburger"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label="Menu"
-            >
-              <i className={`fa-solid ${mobileMenuOpen ? 'fa-xmark' : 'fa-bars'}`} />
-            </button>
-          </div>
-        </div>
-
-        {mobileMenuOpen && (
-          <div className="landing-nav__mobile-menu slide-up-fade">
-            <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
-              <Button variant="ghost" size="md" fullWidth>Log in</Button>
-            </Link>
-            <Link to="/signup" onClick={() => setMobileMenuOpen(false)}>
-              <Button variant="primary" size="md" fullWidth>Get Started</Button>
-            </Link>
-          </div>
-        )}
-      </nav>
-
+      <PublicNavbar />
       <HeroSection />
       <FeaturesSection />
       <FooterSection />

@@ -25,7 +25,10 @@ export default function CategoryFilter({ active, onChange, variant = 'sidebar' }
             'category-filter__item',
             active === f.value && 'category-filter__item--active'
           )}
-          onClick={() => onChange(f.value)}
+          onClick={(e) => {
+            e.preventDefault();
+            onChange(f.value);
+          }}
           style={active === f.value && f.color ? { '--active-color': f.color } as any : undefined}
         >
           <i className={f.icon} style={f.color ? { color: f.color } : undefined} />

@@ -110,13 +110,27 @@
 .toolbar__color-swatch:hover {
   transform: scale(1.15);
 }
-.toolbar__color-native {
+.toolbar__color-native-wrapper {
+  position: relative;
   width: 24px;
   height: 24px;
-  border: none;
   border-radius: 50%;
   cursor: pointer;
-  padding: 0;
+  background: conic-gradient(red, yellow, lime, aqua, blue, magenta, red);
+  border: 2px solid var(--border);
+  transition: transform 0.1s;
+}
+.toolbar__color-native-wrapper:hover {
+  transform: scale(1.15);
+}
+.toolbar__color-native {
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 
 /* Preset swatch backgrounds (moved from inline styles) */

@@ -1,20 +1,20 @@
-.entry-card {
+.note-card {
   cursor: pointer;
   position: relative;
 }
 
-.entry-card__top {
+.note-card__top {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 10px;
 }
-.entry-card__date {
+.note-card__date {
   font-size: 12px;
   color: var(--text-muted);
 }
 
-.entry-card__title {
+.note-card__title {
   font-family: var(--font-heading);
   font-size: 18px;
   color: var(--text-primary);
@@ -26,7 +26,7 @@
   margin-bottom: 6px;
 }
 
-.entry-card__excerpt {
+.note-card__excerpt {
   font-size: 14px;
   color: var(--text-secondary);
   line-height: 1.55;
@@ -37,17 +37,17 @@
   margin-bottom: 8px;
 }
 
-.entry-card__actions {
+.note-card__actions {
   display: flex;
   gap: 4px;
   opacity: 0;
   transition: opacity 0.2s;
 }
-.entry-card:hover .entry-card__actions {
+.note-card:hover .note-card__actions {
   opacity: 1;
 }
 
-.entry-card__action {
+.note-card__action {
   width: 32px;
   height: 32px;
   display: flex;
@@ -59,10 +59,10 @@
   cursor: pointer;
   transition: all 0.15s;
 }
-.entry-card__action:hover {
+.note-card__action:hover {
   color: var(--text-primary);
   background: var(--bg-secondary);
 }
-.entry-card__action--danger:hover {
+.note-card__action--danger:hover {
   color: var(--danger);
 }

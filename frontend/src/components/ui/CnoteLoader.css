@@ -16,10 +16,4 @@
 .cnote-loader__logo {
   height: 60px;
   width: auto;
-  margin-bottom: 20px;
-}
-
-.cnote-loader__message {
-  font-size: 13px;
-  color: var(--text-muted);
 }

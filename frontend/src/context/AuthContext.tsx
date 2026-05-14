@@ -1,55 +1,63 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import type { User } from '../types';
-import { DEMO_USER } from '../demo/demoData';
-
 interface AuthContextType {
   user: User | null;
-  isDemo: boolean;
   isLoading: boolean;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
   login: (email: string, password: string) => Promise<void>;
-  signup: (name: string, email: string, password: string) => Promise<void>;
+  signup: (email: string, password: string, confirmPassword: string) => Promise<void>;
   logout: () => void;
-  enterDemo: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  isDemo: false,
-  isLoading: false,
+  isLoading: true,
+  setUser: () => {},
   login: async () => {},
   signup: async () => {},
   logout: () => {},
-  enterDemo: () => {},
 });
+
+import { authApi } from '../services/api';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [isDemo, setIsDemo] = useState(false);
-  const [isLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const enterDemo = useCallback(() => {
-    setUser(DEMO_USER);
-    setIsDemo(true);
+  useEffect(() => {
+    authApi.me()
+      .then(res => {
+        setUser(res.data);
+      })
+      .catch(() => {
+        // Not logged in, ignore
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   }, []);
 
-  const login = useCallback(async (_email: string, _password: string) => {
-    // Real implementation: call authApi.login() with httpOnly cookies
-    // For now, this is a placeholder that will be wired to the backend
-    throw new Error('Backend not connected yet. Use Demo mode to explore the app.');
+  const login = useCallback(async (email: string, password: string) => {
+    const res = await authApi.login(email, password);
+    setUser(res.data.data);
   }, []);
 
-  const signup = useCallback(async (_name: string, _email: string, _password: string) => {
-    // Real implementation: call authApi.signup()
-    throw new Error('Backend not connected yet. Use Demo mode to explore the app.');
+  const signup = useCallback(async (email: string, password: string, confirmPassword: string) => {
+    const res = await authApi.signup(email, password, confirmPassword);
+    setUser(res.data.data);
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    try {
+      await authApi.logout();
+    } catch {
+      // ignore
+    }
     setUser(null);
-    setIsDemo(false);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isDemo, isLoading, login, signup, logout, enterDemo }}>
+    <AuthContext.Provider value={{ user, isLoading, setUser, login, signup, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,0 +1,141 @@
+.public-note-page {
+  min-height: 100vh;
+  background-color: var(--bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.public-note__nav {
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-nav);
+}
+
+.public-note__brand {
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+}
+
+.public-note__main {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.public-note__article {
+  width: 100%;
+  max-width: 680px; /* Medium-style narrow column */
+  margin: 0 auto;
+}
+
+.public-note__title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 2.5rem;
+  line-height: 1.1;
+  color: var(--text-primary);
+  margin: 0 0 32px 0;
+}
+
+.public-note__author-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+.public-note__avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--bg-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  color: var(--text-secondary);
+  overflow: hidden;
+}
+
+.public-note__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.public-note__author-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.public-note__author-name {
+  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.public-note__date-read {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.public-note__dot {
+  opacity: 0.5;
+}
+
+.public-note__content {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 1.125rem;
+  line-height: 1.8;
+  color: var(--text-primary);
+}
+
+/* Error state */
+.public-note__error {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px;
+}
+
+.public-note__error-logo {
+  margin-bottom: 24px;
+  transform: scale(1.5);
+  opacity: 0.5;
+}
+
+.public-note__error h2 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 2rem;
+  margin-bottom: 12px;
+}
+
+.public-note__error p {
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+
+.public-note__home-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+.public-note__home-link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+  .public-note__title {
+    font-size: 2rem;
+  }
+}

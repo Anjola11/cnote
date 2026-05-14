@@ -1,26 +1,27 @@
 import { useRef, useEffect, useCallback } from 'react';
 import type { SaveStatus } from '../types';
-import { usePatchEntry } from './useEntries';
+import { usePatchNote } from './useNotes';
 
 export function useAutoSave(
-  entryId: string,
+  noteId: string,
   content: object | null,
-  setSaveStatus: (status: SaveStatus) => void
+  setSaveStatus: (status: SaveStatus) => void,
+  enabled: boolean = true
 ) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const patchEntry = usePatchEntry();
+  const { mutateAsync } = usePatchNote();
   const isFirstRender = useRef(true);
 
   const save = useCallback(async (contentToSave: object) => {
     setSaveStatus('saving');
     try {
-      await patchEntry.mutateAsync({ id: entryId, data: { content: contentToSave } as any });
+      await mutateAsync({ id: noteId, data: { content: contentToSave } as any });
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 2000);
     } catch {
       setSaveStatus('error');
     }
-  }, [entryId, patchEntry, setSaveStatus]);
+  }, [noteId, mutateAsync, setSaveStatus]);
 
   useEffect(() => {
     // Skip the first render (initial content load)
@@ -29,7 +30,7 @@ export function useAutoSave(
       return;
     }
 
-    if (!content) return;
+    if (!content || !enabled) return;
 
     setSaveStatus('unsaved');
 

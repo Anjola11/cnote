@@ -31,9 +31,10 @@ interface RichEditorProps {
   content: object;
   onUpdate: (content: object) => void;
   onEditorReady?: (editor: any) => void;
+  editable?: boolean;
 }
 
-export default function RichEditor({ content, onUpdate, onEditorReady }: RichEditorProps) {
+export default function RichEditor({ content, onUpdate, onEditorReady, editable = true }: RichEditorProps) {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -67,6 +68,7 @@ export default function RichEditor({ content, onUpdate, onEditorReady }: RichEdi
       Scripture,
     ],
     content: content as any,
+    editable,
     onUpdate: ({ editor }) => {
       onUpdate(editor.getJSON());
     },
@@ -84,6 +86,12 @@ export default function RichEditor({ content, onUpdate, onEditorReady }: RichEdi
       onEditorReady(editor);
     }
   }, [editor, onEditorReady]);
+
+  useEffect(() => {
+    if (editor) {
+      editor.setEditable(editable);
+    }
+  }, [editor, editable]);
 
   return (
     <div className="rich-editor" data-gramm="false" data-enable-grammarly="false">

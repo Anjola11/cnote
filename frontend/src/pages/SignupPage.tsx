@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { gsap } from 'gsap';
+import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
+import { getUserErrorMessage } from '../services/api';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Logo from '../components/ui/Logo';
@@ -20,14 +22,12 @@ const STRENGTH_LABELS = ['', 'Weak', 'Fair', 'Good', 'Strong'];
 const STRENGTH_COLORS = ['', '#EF4444', '#F97316', '#EAB308', 'var(--success)'];
 
 export default function SignupPage() {
-  const { signup, enterDemo } = useAuth();
+  const { signup } = useAuth();
   const navigate = useNavigate();
 
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const formRef = useRef<HTMLDivElement>(null);
@@ -55,22 +55,19 @@ export default function SignupPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (passwordMismatch) return;
-    setError('');
+    if (passwordMismatch) {
+      toast.error('Passwords do not match');
+      return;
+    }
     setLoading(true);
     try {
-      await signup(name, email, password);
-      navigate('/feed');
+      await signup(email, password, confirmPassword);
+      navigate('/verify');
     } catch (err: any) {
-      setError(err.message || 'Signup failed. Please try again.');
+      toast.error(getUserErrorMessage(err, 'Signup failed. Please try again.'));
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleDemo = () => {
-    enterDemo();
-    navigate('/feed');
   };
 
   return (
@@ -117,21 +114,12 @@ export default function SignupPage() {
           <form onSubmit={handleSubmit} style={{ opacity: 0 }}>
             <div className="signup-page__fields">
               <Input
-                label="Full Name"
-                icon="fa-solid fa-user"
-                type="text"
-                placeholder="Alex Okafor"
-                value={name}
-                onChange={e => { setName(e.target.value); setError(''); }}
-                required
-              />
-              <Input
                 label="Email address"
                 icon="fa-solid fa-envelope"
                 type="email"
                 placeholder="you@example.com"
                 value={email}
-                onChange={e => { setEmail(e.target.value); setError(''); }}
+                onChange={e => setEmail(e.target.value)}
                 required
               />
               <div>
@@ -141,7 +129,7 @@ export default function SignupPage() {
                   type="password"
                   placeholder="At least 8 characters"
                   value={password}
-                  onChange={e => { setPassword(e.target.value); setError(''); }}
+                  onChange={e => setPassword(e.target.value)}
                   required
                   minLength={8}
                 />
@@ -168,17 +156,10 @@ export default function SignupPage() {
                 type="password"
                 placeholder="Re-enter your password"
                 value={confirmPassword}
-                onChange={e => { setConfirmPassword(e.target.value); setError(''); }}
+                onChange={e => setConfirmPassword(e.target.value)}
                 error={passwordMismatch ? 'Passwords do not match' : undefined}
                 required
               />
-
-              {error && (
-                <div className="signup-page__error-banner">
-                  <i className="fa-solid fa-circle-exclamation" />
-                  <span>{error}</span>
-                </div>
-              )}
 
               <Button
                 type="submit"
@@ -196,14 +177,6 @@ export default function SignupPage() {
           <p className="signup-page__terms" style={{ opacity: 0 }}>
             By signing up, you agree to our Terms and Privacy Policy.
           </p>
-
-          {/* Demo link */}
-          <div className="signup-page__demo" style={{ opacity: 0 }}>
-            <button className="signup-page__demo-link" onClick={handleDemo}>
-              <i className="fa-solid fa-wand-magic-sparkles" />
-              Or try the demo first →
-            </button>
-          </div>
         </div>
       </div>
     </div>

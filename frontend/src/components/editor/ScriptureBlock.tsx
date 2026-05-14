@@ -1,8 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Modal from '../ui/Modal';
 import Input from '../ui/Input';
-import { useAuth } from '../../context/AuthContext';
-import { searchBibleApi } from '../../demo/demoBibleApi';
 import { scriptureApi } from '../../services/api';
 import type { ScriptureVerse } from '../../types';
 import './ScriptureBlock.css';
@@ -14,7 +12,6 @@ interface ScriptureBlockProps {
 }
 
 export default function ScriptureBlock({ isOpen, onClose, onInsert }: ScriptureBlockProps) {
-  const { isDemo } = useAuth();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<ScriptureVerse[]>([]);
   const [loading, setLoading] = useState(false);
@@ -24,16 +21,14 @@ export default function ScriptureBlock({ isOpen, onClose, onInsert }: ScriptureB
     if (!q.trim()) { setResults([]); return; }
     setLoading(true);
     try {
-      const res = isDemo
-        ? await searchBibleApi(q)
-        : await scriptureApi.search(q);
+      const res = await scriptureApi.search(q);
       setResults(res);
     } catch {
       setResults([]);
     } finally {
       setLoading(false);
     }
-  }, [isDemo]);
+  }, []);
 
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current);

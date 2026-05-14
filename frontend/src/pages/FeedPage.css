@@ -3,41 +3,7 @@
   background: var(--bg);
 }
 
-/* Sidebar */
-.feed-sidebar {
-  display: none;
-  position: fixed;
-  left: 0;
-  top: 0;
-  width: 260px;
-  height: 100vh;
-  background: var(--bg-secondary);
-  border-right: 1px solid var(--border);
-  padding: 20px 16px;
-  z-index: 50;
-  flex-direction: column;
-  gap: 16px;
-}
-@media (min-width: 1024px) {
-  .feed-sidebar { display: flex; }
-}
-
-.feed-sidebar__header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 24px;
-  padding: 0 4px;
-}
-.feed-sidebar__logo {
-  height: 48px;
-  width: auto;
-}
-
-.feed-sidebar__filters {
-  flex: 1;
-  margin-top: 8px;
-}
+/* Old sidebar removed in favor of shared DesktopSidebar */
 
 /* Main content */
 .feed-main {
@@ -48,7 +14,7 @@
   .feed-main { padding: 80px 24px 32px; }
 }
 @media (min-width: 1024px) {
-  .feed-main { margin-left: 260px; padding: 80px 40px 32px; }
+  .feed-main { margin-left: 260px; padding: 40px 40px 32px; }
 }
 
 .feed-main__header {
@@ -69,6 +35,11 @@
   font-family: var(--font-heading);
   font-size: 26px;
   color: var(--text-primary);
+}
+@media (max-width: 480px) {
+  .feed-main__title {
+    font-size: 22px;
+  }
 }
 .feed-main__count {
   font-size: 13px;
@@ -106,13 +77,9 @@
   box-shadow: 0 0 0 3px rgba(76,58,148,0.15);
 }
 
-/* Mobile chips */
+/* Category chips */
 .feed-main__chips {
-  display: block;
-  margin-bottom: 20px;
-}
-@media (min-width: 1024px) {
-  .feed-main__chips { display: none; }
+  margin-bottom: 24px;
 }
 
 /* Groups */
@@ -214,12 +181,12 @@
   position: fixed;
   bottom: 24px;
   right: 24px;
-  width: 56px;
-  height: 56px;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   background: var(--accent);
   color: #fff;
-  font-size: 20px;
+  font-size: 18px;
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 20px rgba(76,58,148,0.4);

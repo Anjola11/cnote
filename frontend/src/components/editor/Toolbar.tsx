@@ -117,7 +117,7 @@ function ToolbarPopover({ children, anchorRef, onClose }: { children: React.Reac
 
 /* ── main component ── */
 
-export default function Toolbar({ editor, category, onScriptureClick }: ToolbarProps) {
+export default function Toolbar({ editor, category }: ToolbarProps) {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [showLangPicker, setShowLangPicker] = useState(false);
@@ -139,6 +139,34 @@ export default function Toolbar({ editor, category, onScriptureClick }: ToolbarP
     setShowLinkInput(false);
     setLinkUrl('');
   }, [editor, linkUrl]);
+
+  // Visual Viewport logic for mobile
+  useEffect(() => {
+    if (window.visualViewport && window.innerWidth <= 768) {
+      const updateToolbarPosition = () => {
+        const toolbar = document.querySelector('.toolbar') as HTMLElement;
+        if (!toolbar) return;
+        const viewport = window.visualViewport;
+        if (!viewport) return;
+        
+        // Calculate the bottom offset based on the visual viewport height
+        // window.innerHeight is the layout viewport (usually full screen)
+        // viewport.height is the part of the screen not covered by the keyboard
+        const offsetBottom = window.innerHeight - viewport.height;
+        
+        toolbar.style.bottom = `${offsetBottom + 12}px`;
+      };
+
+      updateToolbarPosition();
+      window.visualViewport.addEventListener('resize', updateToolbarPosition);
+      window.visualViewport.addEventListener('scroll', updateToolbarPosition);
+      
+      return () => {
+        window.visualViewport?.removeEventListener('resize', updateToolbarPosition);
+        window.visualViewport?.removeEventListener('scroll', updateToolbarPosition);
+      };
+    }
+  }, []);
 
   // Don't render anything when the editor isn't ready
   if (!editor) return null;
@@ -227,12 +255,14 @@ export default function Toolbar({ editor, category, onScriptureClick }: ToolbarP
                   type="button"
                 />
               ))}
-              <input
-                type="color"
-                className="toolbar__color-native"
-                onChange={e => { editor.chain().focus().setColor(e.target.value).run(); setShowColorPicker(false); }}
-                title="Custom color"
-              />
+              <div className="toolbar__color-native-wrapper" title="Custom color">
+                <input
+                  type="color"
+                  className="toolbar__color-native"
+                  onChange={e => { editor.chain().focus().setColor(e.target.value).run(); setShowColorPicker(false); }}
+                  title="Custom color"
+                />
+              </div>
             </div>
           </ToolbarPopover>
         )}
@@ -309,11 +339,15 @@ export default function Toolbar({ editor, category, onScriptureClick }: ToolbarP
           )}
         </div>
       )}
+      {/* Category-conditional tools */}
+      {/* Scripture Component temporarily disabled per instruction */}
+      {/* 
       {category === 'spiritual' && onScriptureClick && (
         <ToolBtn active={false} onClick={onScriptureClick} title="Insert Scripture">
           <i className="fa-solid fa-book-bible" />
         </ToolBtn>
-      )}
+      )} 
+      */}
     </div>
   );
 }

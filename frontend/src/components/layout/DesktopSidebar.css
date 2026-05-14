@@ -1,0 +1,226 @@
+.desktop-sidebar {
+  display: none;
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 260px;
+  height: 100vh;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+  padding: 20px 12px 12px;
+  z-index: 50;
+  flex-direction: column;
+}
+@media (min-width: 1024px) {
+  .desktop-sidebar { display: flex; }
+}
+
+.desktop-sidebar__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 0 8px;
+}
+.desktop-sidebar__logo {
+  height: 40px;
+  width: auto;
+}
+
+.desktop-sidebar__new-action {
+  margin-bottom: 20px;
+  padding: 0 4px;
+}
+.desktop-sidebar__new-btn {
+  width: 100%;
+}
+
+.desktop-sidebar__main-nav {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.desktop-sidebar__scrollable {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  gap: 12px;
+}
+
+/* History Section */
+.desktop-sidebar__history {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.desktop-sidebar__section-title {
+  font-size: 10px; /* Reduced */
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 0 16px;
+  opacity: 0.8;
+}
+
+.desktop-sidebar__history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.desktop-sidebar__history-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 13.5px;
+  transition: all 0.2s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.desktop-sidebar__history-item i {
+  font-size: 14px;
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+.desktop-sidebar__history-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+.desktop-sidebar__history-item.active {
+  background: var(--accent-light);
+  color: var(--accent);
+}
+
+.desktop-sidebar__history-empty {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 8px 16px;
+}
+
+/* Nav Links Section (Profile, Bin) */
+.desktop-sidebar__section--nav {
+  margin-top: auto; /* Push to bottom of scrollable area */
+  padding: 12px 0 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-top: 1px solid rgba(var(--border-rgb), 0.5);
+}
+
+.desktop-sidebar__link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 16px; /* Reduced vertical padding */
+  border-radius: var(--radius-md);
+  color: var(--text-muted); /* More subtle color */
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 12.5px; /* Reduced font size */
+  transition: all 0.2s;
+}
+.desktop-sidebar__link i {
+  font-size: 13px; /* Reduced icon size */
+  width: 18px;
+  text-align: center;
+  opacity: 0.6;
+}
+.desktop-sidebar__link:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+.desktop-sidebar__link.active {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.desktop-sidebar__footer {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.desktop-sidebar__user {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+}
+
+.desktop-sidebar__avatar-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.desktop-sidebar__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.desktop-sidebar__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.desktop-sidebar__user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+}
+.desktop-sidebar__user-info strong {
+  font-size: 13px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.desktop-sidebar__user-info span {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.desktop-sidebar__logout-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--danger);
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.desktop-sidebar__logout-icon:hover {
+  background: rgba(239, 68, 68, 0.08);
+}
