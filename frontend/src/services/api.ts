@@ -1,8 +1,17 @@
 import axios from 'axios';
 import type { Note, NoteListItem, Category, ScriptureVerse } from '../types';
 
+const getBaseURL = () => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (!envUrl) return '/api/v1';
+  // Ensure it doesn't have a trailing slash before appending
+  const cleanUrl = envUrl.endsWith('/') ? envUrl.slice(0, -1) : envUrl;
+  // Append /api/v1 if not already present
+  return cleanUrl.endsWith('/api/v1') ? cleanUrl : `${cleanUrl}/api/v1`;
+};
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api/v1',
+  baseURL: getBaseURL(),
   withCredentials: true, // httpOnly cookie auth
 });
 
