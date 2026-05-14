@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, status, Response, Cookie, BackgroundTasks, Request
 from sqlmodel.ext.asyncio.session import AsyncSession
-from src.auth.schemas import (
+from .schemas import (
     UserCreateInput,
     UserCreateResponse,
     UserLoginInput,
@@ -14,12 +14,12 @@ from src.auth.schemas import (
     ProfileUpdateInput,
     UserProfileResponse,
 )
-from src.db.main import get_session
-from src.auth.services import AuthServices
-from src.utils.logger import logger
-from src.utils.dependencies import get_verified_user
-from src.utils.responses import success_response
-from src.limiter import get_user_id_or_ip, limiter
+from ..db.main import get_session
+from .services import AuthServices
+from ..utils.logger import logger
+from ..utils.dependencies import get_verified_user
+from ..utils.responses import success_response
+from ..limiter import get_user_id_or_ip, limiter
 
 auth_router = APIRouter()
 

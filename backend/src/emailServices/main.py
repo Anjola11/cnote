@@ -6,9 +6,11 @@ from jinja2 import Environment, FileSystemLoader
 
 from brevo import Brevo
 from brevo.core.api_error import ApiError
+import base64
 from brevo.transactional_emails import (
     SendTransacEmailRequestSender,
     SendTransacEmailRequestToItem,
+    SendTransacEmailRequestInlineAttachmentsItem,
 )
 
 from src.config import Config
@@ -19,6 +21,7 @@ from src.utils.otp import generate_otp
 # Setup template directory paths
 BASE_DIR = Path(__file__).resolve().parent.parent
 TEMPLATE_DIR = BASE_DIR / "templates"
+STATIC_DIR = BASE_DIR / "static"
 
 # Initialize Jinja2 template environment
 template_env = Environment(
@@ -74,6 +77,20 @@ class EmailServices:
             return True
 
         try:
+            # Prepare inline logo attachment
+            logo_path = STATIC_DIR / "logo.png"
+            inline_attachments = []
+            
+            if logo_path.exists():
+                with open(logo_path, "rb") as image_file:
+                    encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+                    inline_attachments.append(
+                        SendTransacEmailRequestInlineAttachmentsItem(
+                            content=encoded_string,
+                            name="logo.png",
+                        )
+                    )
+
             # Use the namespaced service for transactional emails
             self.client.transactional_emails.send_transac_email(
                 subject=subject,
@@ -87,7 +104,8 @@ class EmailServices:
                     SendTransacEmailRequestToItem(
                         email=to_email
                     )
-                ]
+                ],
+                inline_attachments=inline_attachments
             )
             print(f"Email sent to {to_email}: {subject}")
             return True

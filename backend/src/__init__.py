@@ -2,16 +2,16 @@ from fastapi import APIRouter, FastAPI, HTTPException, status, Request
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from contextlib import asynccontextmanager
-from src.config import Config
+from .config import Config
 from fastapi.middleware.cors import CORSMiddleware
-from src.utils.logger import logger
-from src.db.main import init_db
-from src.db.redis import redis_client, check_redis_connection
+from .utils.logger import logger
+from .db.main import init_db
+from .db.redis import redis_client, check_redis_connection
 
-from src.auth.routes import auth_router
-from src.fileUpload.routes import file_router
-from src.limiter import limiter
-from src.notes.routes import notes_router, public_notes_router
+from .auth.routes import auth_router
+from .fileUpload.routes import file_router
+from .limiter import limiter
+from .notes.routes import notes_router, public_notes_router
 from slowapi.errors import RateLimitExceeded
 from email.utils import parsedate_to_datetime
 from datetime import datetime, timezone

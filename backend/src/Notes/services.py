@@ -6,12 +6,12 @@ from uuid import UUID
 from fastapi import UploadFile
 from sqlalchemy.orm import selectinload
 
-from src.fileUpload.main import FileUploadServices
-from src.auth.models import User
-from src.notes.models import Note, NoteCategory, NoteMediaUpload
-from src.notes.schemas import NoteCreateInput
-from src.utils.logger import logger
-from src.utils.utc_now import utc_now
+from ..fileUpload.main import FileUploadServices
+from ..auth.models import User
+from .models import Note, NoteCategory, NoteMediaUpload
+from .schemas import NoteCreateInput
+from ..utils.logger import logger
+from ..utils.utc_now import utc_now
 
 
 class NoteServices:
