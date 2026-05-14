@@ -3,10 +3,10 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, File, Query, Request, UploadFile, status
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from ..db.main import get_session
-from ..fileUpload.main import FileUploadServices
-from .models import NoteCategory
-from .schemas import (
+from src.db.main import get_session
+from src.fileUpload.main import FileUploadServices
+from src.notes.models import NoteCategory
+from src.notes.schemas import (
     DeletedNotesListResponse,
     NoteDeleteResponse,
     NoteContentUpdateBody,
@@ -20,10 +20,10 @@ from .schemas import (
     PublicNoteResponse,
     NoteTitleUpdateBody,
 )
-from .services import NoteServices
-from ..utils.dependencies import get_verified_user_id
-from ..utils.responses import success_response
-from ..limiter import get_user_id_or_ip, limiter
+from src.notes.services import NoteServices
+from src.utils.dependencies import get_verified_user_id
+from src.utils.responses import success_response
+from src.limiter import get_user_id_or_ip, limiter
 
 notes_router = APIRouter()
 public_notes_router = APIRouter()

@@ -10,7 +10,7 @@ import base64
 from brevo.transactional_emails import (
     SendTransacEmailRequestSender,
     SendTransacEmailRequestToItem,
-    SendTransacEmailRequestInlineAttachmentsItem,
+    SendTransacEmailRequestAttachmentItem,
 )
 
 from src.config import Config
@@ -85,7 +85,7 @@ class EmailServices:
                 with open(logo_path, "rb") as image_file:
                     encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
                     inline_attachments.append(
-                        SendTransacEmailRequestInlineAttachmentsItem(
+                        SendTransacEmailRequestAttachmentItem(
                             content=encoded_string,
                             name="logo.png",
                         )
