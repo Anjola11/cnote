@@ -7,6 +7,7 @@ from typing import Optional, TYPE_CHECKING
 import cloudinary
 import sqlalchemy.dialects.postgresql as pg
 from pydantic import computed_field
+from sqlalchemy.orm import relationship
 from sqlmodel import SQLModel, Column, Field, Relationship
 
 from src.utils.utc_now import utc_now
@@ -50,7 +51,9 @@ class Note(SQLModel, table=True):
         sa_column=Column(pg.TIMESTAMP(timezone=True), index=True, nullable=False),
     )
 
-    user: "User" = Relationship(back_populates="notes")
+    user: Optional["User"] = Relationship(
+        sa_relationship=relationship("User", back_populates="notes")
+    )
     
 
     media: list["NoteMediaUpload"] = Relationship(
