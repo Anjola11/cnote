@@ -23,5 +23,6 @@ dependencies = [
     "groq>=1.2.0",
     "cloudinary>=1.44.2",
     "magika>=1.0.3",
+    "slowapi>=0.1.9", 
+    "python-multipart>=0.0.20",
 ]
-

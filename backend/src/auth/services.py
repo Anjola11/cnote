@@ -2,17 +2,26 @@ from sqlmodel import select, desc
 from src.auth.models import User, SignupOtp, ForgotPasswordOtp
 from src.auth.schemas import (
     UserCreateInput, VerifyOtpInput, UserLoginInput, ForgotPasswordInput, 
-    ResetPasswordInput, RenewAccessTokenInput, ResendOtpInput, LogoutInput, OtpTypes
+    ResetPasswordInput, RenewAccessTokenInput, ResendOtpInput, LogoutInput, OtpTypes,
+    ProfileUpdateInput,
 )
 from sqlmodel.ext.asyncio.session import AsyncSession
 from fastapi import HTTPException, status, Response, BackgroundTasks, Request
 from src.utils.logger import logger
-from src.utils.auth import generate_password_hash, verify_password_hash, create_token, decode_token, TokenType
+from src.utils.auth import (
+    generate_password_hash,
+    verify_password_hash,
+    create_token,
+    decode_token,
+    TokenType,
+    token_session_is_valid,
+)
 from datetime import datetime, timezone, timedelta
 import uuid
 from src.db.redis import redis_client
 from src.emailServices.main import EmailServices
 from src.config import Config
+from src.utils.utc_now import utc_now
 
 email_services = EmailServices()
 
@@ -27,6 +36,17 @@ cookie_settings = {
 }
 
 class AuthServices:
+    def _serialize_user(self, user: User) -> dict:
+        return {
+            "uid": str(user.uid),
+            "email": user.email,
+            "is_verified": user.is_verified,
+            "display_name": user.display_name,
+            "bio": user.bio,
+            "avatar_public_id": user.avatar_public_id,
+            "avatar_url": user.profile_picture_url,
+        }
+
     def _origin_host(self, request: Request | None) -> str | None:
         if not request:
             return None
@@ -144,10 +164,13 @@ class AuthServices:
         
         # Hash password before storing (strip to prevent accidental whitespace issues)
         hashed_password = generate_password_hash(userInput.password.strip())
+        fallback_name = userInput.email.split("@")[0]
 
         # Create new user instance
         new_user = User(
-            email=userInput.email,
+            email=userInput.email.lower(),
+            username=fallback_name,
+            display_name=fallback_name,
             password_hash=hashed_password,
         )
 
@@ -158,13 +181,12 @@ class AuthServices:
 
             # Generate tokens for cookie-based auth
             user_payload = {
-                "sub": str(new_user.id),
-                "email": new_user.email,
-                "plan": new_user.plan.value if new_user.plan else None
+                "uid": str(new_user.uid),
+                "session_version": new_user.session_version,
                 
             }
-            access_token = create_token(user_payload, token_type="access")
-            refresh_token = create_token(user_payload, token_type="refresh")
+            access_token = create_token(user_payload, token_type=TokenType.ACCESS)
+            refresh_token = create_token(user_payload, token_type=TokenType.REFRESH)
             
             otp_record = await email_services.save_otp(new_user.uid, session, type=OtpTypes.SIGNUP)
             
@@ -181,11 +203,7 @@ class AuthServices:
                 request=request,
             )
             
-            return {
-                "uid": str(new_user.uid),
-                "email": new_user.email,
-                "is_verified": new_user.is_verified,
-            }
+            return self._serialize_user(new_user)
 
         except Exception as e:
             logger.error(f"Error creating user: {e}")
@@ -259,6 +277,7 @@ class AuthServices:
         
             try:
                 user.is_verified = True
+                user.updated_at = utc_now()
                 session.add(user)
                 await session.delete(latest_otp_record)
                 await session.commit()
@@ -271,8 +290,8 @@ class AuthServices:
 
                 if response is not None:
                     user_dict = user.model_dump()
-                    access_token = create_token(user_dict, token_type="access")
-                    refresh_token = create_token(user_dict, token_type="refresh")
+                    access_token = create_token(user_dict, token_type=TokenType.ACCESS)
+                    refresh_token = create_token(user_dict, token_type=TokenType.REFRESH)
                     self._set_auth_cookies(
                         response=response,
                         access_token=access_token,
@@ -280,11 +299,7 @@ class AuthServices:
                         request=request,
                     )
 
-                return {
-                    "uid": str(user.uid),
-                    "email": user.email,
-                    "is_verified": user.is_verified,
-                }
+                return self._serialize_user(user)
 
             except Exception as e:
                 logger.error(f"Error validating otp user logic: {e}")
@@ -296,14 +311,27 @@ class AuthServices:
         
         elif otp_input.otp_type == OtpTypes.FORGOTPASSWORD:
             try:
+                user_statement = select(User).where(User.uid == latest_otp_record.uid)
+                result = await session.exec(user_statement)
+                user = result.first()
+
+                if not user:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail="User not found"
+                    )
+
                 await session.delete(latest_otp_record)
                 await session.commit()
 
-                token_data = {"uid": str(latest_otp_record.uid)}
+                token_data = {
+                    "uid": str(user.uid),
+                    "session_version": user.session_version,
+                }
                 reset_password_token = create_token(token_data, token_type=TokenType.RESET)
                 
                 return {
-                    "uid": str(latest_otp_record.uid),
+                    "uid": str(user.uid),
                     "reset_token": reset_password_token,
                 }
             except Exception as e:
@@ -418,10 +446,28 @@ class AuthServices:
         if not verified_password:
             raise INVALID_CREDENTIALS
 
+        user.last_login_at = utc_now()
+        user.updated_at = utc_now()
+
+        try:
+            session.add(user)
+            await session.commit()
+            await session.refresh(user)
+        except Exception as e:
+            logger.error(f"Error updating last_login_at for user {user.uid}: {e}")
+            await session.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error"
+            )
+
         user_dict = user.model_dump()
-        access_token = create_token(user_dict, token_type="access")
-        refresh_token = create_token(user_dict, token_type="refresh")
-        
+        token_payload = {
+            "uid": str(user.uid),
+            "session_version": user.session_version,
+        }
+        access_token = create_token(token_payload, token_type=TokenType.ACCESS)
+        refresh_token = create_token(token_payload, token_type=TokenType.REFRESH)
         self._set_auth_cookies(
             response=response,
             access_token=access_token,
@@ -429,11 +475,7 @@ class AuthServices:
             request=request,
         )
 
-        return {
-            'uid': str(user.uid),
-            'email': user.email,
-            'is_verified': user.is_verified,
-        }
+        return self._serialize_user(user)
 
     async def forgot_password(self, forgot_password_input: ForgotPasswordInput, session: AsyncSession, background_tasks: BackgroundTasks):
         user = await self.get_user(forgot_password_input.email, session, True)
@@ -475,9 +517,17 @@ class AuthServices:
                 detail="User not found"
             )
 
+        if not token_session_is_valid(token_decode, user.session_version):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Reset token expired. Please request a new one."
+            )
+
         new_hashed_password = generate_password_hash(reset_password_input.new_password.strip())
         user.password_hash = new_hashed_password
         user.is_verified = True  # Successful reset via OTP proves email ownership
+        user.session_version += 1
+        user.updated_at = utc_now()
 
         try:
             session.add(user)
@@ -498,6 +548,12 @@ class AuthServices:
         response: Response,
         request: Request | None = None,
     ):
+        if not old_refresh_token_str:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Refresh token missing"
+            )
+
         old_refresh_token_decode = decode_token(old_refresh_token_str)
 
         if old_refresh_token_decode.get('type') != "refresh":
@@ -524,11 +580,20 @@ class AuthServices:
                 detail="User not found"
             )
             
-        user_data = {"uid": user.uid, "email": user.email}
+        if not token_session_is_valid(old_refresh_token_decode, user.session_version):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Refresh token expired. Login required."
+            )
 
-        new_token = create_token(user_data, token_type="access")
+        user_data = {
+            "uid": user.uid,
+            "session_version": user.session_version,
+        }
+
+        new_token = create_token(user_data, token_type=TokenType.ACCESS)
         await self.add_token_to_blocklist(old_refresh_token_str)
-        new_refresh_token = create_token(user_data, token_type="refresh")
+        new_refresh_token = create_token(user_data, token_type=TokenType.REFRESH)
         
         self._set_auth_cookies(
             response=response,
@@ -585,8 +650,38 @@ class AuthServices:
         return {}
 
     async def get_me(self, current_user):
-        return {
-            "uid": str(current_user.uid),
-            "email": current_user.email,
-            "is_verified": current_user.is_verified,
-        }
+        return self._serialize_user(current_user)
+
+    async def update_profile(
+        self,
+        current_user: User,
+        profile_input: ProfileUpdateInput,
+        session: AsyncSession,
+    ):
+        update_data = profile_input.model_dump(exclude_unset=True)
+
+        if not update_data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No profile fields provided"
+            )
+
+        for field_name, value in update_data.items():
+            if isinstance(value, str):
+                value = value.strip() or None
+            setattr(current_user, field_name, value)
+
+        current_user.updated_at = utc_now()
+
+        try:
+            session.add(current_user)
+            await session.commit()
+            await session.refresh(current_user)
+            return self._serialize_user(current_user)
+        except Exception as e:
+            logger.error(f"Error updating profile for user {current_user.uid}: {e}")
+            await session.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error"
+            )

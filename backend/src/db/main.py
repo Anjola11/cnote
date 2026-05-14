@@ -7,6 +7,10 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 engine = create_async_engine(
     url=Config.DATABASE_URL,
     echo=False,
+    pool_size=10,
+    max_overflow=20, 
+    pool_pre_ping=True, 
+    pool_recycle=3600
 )
 
 async def init_db():

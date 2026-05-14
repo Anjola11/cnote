@@ -11,12 +11,15 @@ from src.auth.schemas import (
     ResendOtpInput,
     ForgotPasswordInput,
     ResetPasswordInput,
+    ProfileUpdateInput,
+    UserProfileResponse,
 )
 from src.db.main import get_session
 from src.auth.services import AuthServices
 from src.utils.logger import logger
 from src.utils.dependencies import get_verified_user
 from src.utils.responses import success_response
+from src.limiter import get_user_id_or_ip, limiter
 
 auth_router = APIRouter()
 
@@ -24,6 +27,7 @@ def get_auth_services() -> AuthServices:
     return AuthServices()
 
 @auth_router.post('/signup', response_model=UserCreateResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/hour")
 async def create_user(
     user_input: UserCreateInput, 
     background_tasks: BackgroundTasks,
@@ -41,6 +45,7 @@ async def create_user(
     )
 
 @auth_router.post('/verify-otp', status_code=status.HTTP_200_OK)
+@limiter.limit("5/minute", key_func=get_user_id_or_ip)
 async def verify_otp(
     otp_input: VerifyOtpInput,
     background_tasks: BackgroundTasks,
@@ -60,7 +65,9 @@ async def verify_otp(
     )
 
 @auth_router.post('/resend-otp', status_code=status.HTTP_200_OK)
+@limiter.limit("3/hour", key_func=get_user_id_or_ip)
 async def resend_otp(
+    request: Request,
     resend_otp_input: ResendOtpInput,
     background_tasks: BackgroundTasks,
     session: AsyncSession = Depends(get_session),
@@ -79,8 +86,10 @@ async def resend_otp(
     )
 
 @auth_router.post('/forgot-password', status_code=status.HTTP_200_OK)
+@limiter.limit("3/hour")
 async def forgot_password(
     forgot_password_input: ForgotPasswordInput,
+    request: Request,
     background_tasks: BackgroundTasks,
     session: AsyncSession = Depends(get_session),
     auth_services: AuthServices = Depends(get_auth_services)
@@ -106,6 +115,7 @@ async def reset_password(
     )
 
 @auth_router.post('/login', response_model=UserLoginResponse, status_code=status.HTTP_200_OK)
+@limiter.limit("10/15minute")
 async def login(
     login_input: UserLoginInput,
     request: Request,
@@ -122,6 +132,7 @@ async def login(
     )
 
 @auth_router.post('/renew-access-token', response_model=RenewAccessTokenResponse, status_code=status.HTTP_200_OK)
+@limiter.limit("120/minute", key_func=get_user_id_or_ip)
 async def renew_access_token(
     request: Request,
     response: Response,
@@ -138,6 +149,7 @@ async def renew_access_token(
     )
 
 @auth_router.post('/logout', response_model=LogoutResponse, status_code=status.HTTP_200_OK)
+@limiter.limit("120/minute", key_func=get_user_id_or_ip)
 async def logout(
     request: Request,
     response: Response,
@@ -154,10 +166,27 @@ async def logout(
     )
 
 
-@auth_router.get("/me")
-async def get_me(current_user = Depends(get_verified_user), auth_services: AuthServices = Depends(get_auth_services)):
+@auth_router.get("/me", response_model=UserProfileResponse, status_code=status.HTTP_200_OK)
+@limiter.limit("120/minute", key_func=get_user_id_or_ip)
+async def get_me(request: Request, current_user = Depends(get_verified_user), auth_services: AuthServices = Depends(get_auth_services)):
     result = await auth_services.get_me(current_user)
     return success_response(
         message="User details fetched successfully",
+        data=result,
+    )
+
+
+@auth_router.patch("/me", response_model=UserProfileResponse, status_code=status.HTTP_200_OK)
+@limiter.limit("120/minute", key_func=get_user_id_or_ip)
+async def update_me(
+    request: Request,
+    profile_input: ProfileUpdateInput,
+    current_user = Depends(get_verified_user),
+    session: AsyncSession = Depends(get_session),
+    auth_services: AuthServices = Depends(get_auth_services),
+):
+    result = await auth_services.update_profile(current_user, profile_input, session)
+    return success_response(
+        message="Profile updated successfully",
         data=result,
     )

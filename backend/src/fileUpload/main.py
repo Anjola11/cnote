@@ -1,14 +1,13 @@
 from magika import Magika, PredictionMode
-from src.config import Config
 from fastapi import UploadFile, HTTPException, status
 import cloudinary
 from cloudinary.uploader import upload, destroy
 import asyncio
 import uuid
 from enum import Enum
-from typing import Optional
+
+from src.config import Config
 from src.utils.logger import logger
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 class ImageCategory(str, Enum):
     AVATAR = "avatar"
@@ -29,7 +28,16 @@ ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
 class FileUploadServices:
 
-    def validate_file(self, file: UploadFile, image_category: ImageCategory):
+    async def get_file_size(self, file: UploadFile) -> int:
+        #
+        try:
+            await asyncio.to_thread(file.file.seek, 0, 2)
+            size = await asyncio.to_thread(file.file.tell)
+        finally:
+            await asyncio.to_thread(file.file.seek, 0)
+        return size
+
+    async def validate_file(self, file: UploadFile, image_category: ImageCategory) -> int:
         max_upload_bytes = (
             max_avatar_upload_size
             if image_category == ImageCategory.AVATAR
@@ -37,8 +45,8 @@ class FileUploadServices:
         )
 
         # Read a header chunk and reset 
-        header_data = file.file.read(2048)
-        file.file.seek(0)
+        header_data = await file.read(2048)
+        await file.seek(0)
 
         
         result = _magika.identify_bytes(header_data)
@@ -57,18 +65,18 @@ class FileUploadServices:
                 detail="Invalid file type. Only JPEG, PNG, and WebP are allowed."
             )
 
-        file.file.seek(0, 2)
-        file_size = file.file.tell()
-        file.file.seek(0)
+        file_size = await self.get_file_size(file)
 
         if file_size > (max_upload_bytes * 1024 * 1024):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"File exceeds maximum size of {max_upload_bytes}MB"
             )
+
+        return file_size
         
     async def upload_avatar(self, file: UploadFile, user_id: uuid.UUID, old_avatar_id: str | None = None):
-        self.validate_file(file, ImageCategory.AVATAR)
+        await self.validate_file(file, ImageCategory.AVATAR)
 
         file_path = f"CNOTE/AVATARS/{user_id}"
 
@@ -82,6 +90,10 @@ class FileUploadServices:
                 )
             except Exception as e:
                 logger.error(f"Warning: Failed to delete old image: {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"image delete failed:"
+                )
         try:
             response = await asyncio.to_thread(
                 upload,
@@ -89,17 +101,20 @@ class FileUploadServices:
                 folder=file_path,
             )
             return {
-                "public_id": response["public_id"]
+                "public_id": response["public_id"],
+                "url": response.get("secure_url"),
             }
         except Exception as e:
+            logger.error(f"Warning: Failed to upload new image: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Cloudinary upload failed: {str(e)}"
+                detail=f"image upload failed:"
             )
 
 
     async def upload_note_image(self, file: UploadFile, user_id: uuid.UUID, note_id: uuid.UUID):
-        self.validate_file(file, ImageCategory.NOTE_IMG)
+        file_size = await self.validate_file(file, ImageCategory.NOTE_IMG)
+
 
      
         file_path = f"CNOTE/NOTES/{user_id}/{note_id}"
@@ -113,7 +128,12 @@ class FileUploadServices:
                 resource_type="auto"
             )
             return {
-                "public_id": response["public_id"]
+                "public_id": response["public_id"],
+                "url": response.get("secure_url"),
+                "size_bytes": file_size,
+                "height": response.get("height", 0),
+                "width": response.get("width", 0),
+                "format": response.get("format", ""),
             }
         except Exception as e:
             raise HTTPException(
@@ -121,5 +141,16 @@ class FileUploadServices:
                 detail=f"Cloudinary upload failed: {str(e)}"
             )
         
-    # async def delete_note_image(self, cloudinary_public_id: str, session: AsyncSession):
-        
+    async def delete_file(self, cloudinary_public_id: str):
+        try:
+            await asyncio.to_thread(
+                destroy,
+                cloudinary_public_id
+            )
+        except Exception as e:
+            logger.error(f"Warning: Failed to delete old image: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"image delete failed:"
+            )
+

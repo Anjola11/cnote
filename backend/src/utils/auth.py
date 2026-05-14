@@ -32,12 +32,23 @@ def verify_password_hash(password: str, hashed_password: str) -> bool:
 
 def create_token(user_data: dict, token_type: TokenType):
 
+    # Accept either TokenType or raw string (some callsites pass "access"/"refresh").
+    # Normalize to TokenType so exp is always set correctly.
+    try:
+        token_type = TokenType(token_type)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid token type",
+        )
+
     current_time = datetime.now(timezone.utc)
     payload = {
         'iat': current_time,
         'jti': str(uuid.uuid4()),
-        'type': token_type,
+        'type': token_type.value,
         'sub': str(user_data.get('uid')),
+        'session_version': int(user_data.get('session_version', 0)),
         
     }
 
@@ -87,3 +98,7 @@ def decode_token(token: str):
             detail="Something went wrong processing the token."
         )
     return token_data
+
+
+def token_session_is_valid(token_data: dict, current_session_version: int) -> bool:
+    return int(token_data.get("session_version", 0)) == int(current_session_version)

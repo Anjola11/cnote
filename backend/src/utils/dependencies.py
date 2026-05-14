@@ -7,6 +7,7 @@ from src.db.redis import redis_client
 from sqlmodel import select
 import uuid
 import logging
+from src.utils.auth import token_session_is_valid
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +71,12 @@ async def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found"
+        )
+
+    if not token_session_is_valid(token_data, user.session_version):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session expired. Please login again."
         )
         
     return user

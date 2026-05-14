@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, status, Request
+from fastapi import APIRouter, FastAPI, HTTPException, status, Request
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from contextlib import asynccontextmanager
@@ -7,6 +7,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.utils.logger import logger
 from src.db.main import init_db
 from src.db.redis import redis_client, check_redis_connection
+
+from src.auth.routes import auth_router
+from src.fileUpload.routes import file_router
+from src.limiter import limiter
+from src.notes.routes import notes_router, public_notes_router
+from slowapi.errors import RateLimitExceeded
+from email.utils import parsedate_to_datetime
+from datetime import datetime, timezone
+from slowapi.middleware import SlowAPIMiddleware
 
 
 @asynccontextmanager
@@ -29,6 +38,11 @@ app = FastAPI(
     description="cnote api documentation",
     lifespan=lifespan
 )
+
+app.add_middleware(SlowAPIMiddleware)
+
+
+app.state.limiter = limiter
 
 origins = Config.ALLOWED_ORIGINS
 
@@ -79,3 +93,42 @@ async def custom_validation_exception_handler(request:Request, exc: RequestValid
             "data": None
         }
     )
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_exception_handler(request: Request, exc):
+    headers = getattr(exc, "headers", None) or {}
+    retry_after_raw = headers.get("Retry-After") or headers.get("retry-after")
+
+    retry_after_seconds: int = 0
+    if retry_after_raw:
+        try:
+            retry_after_seconds = int(float(str(retry_after_raw)))
+        except ValueError:
+            # Retry-After can also be an HTTP-date
+            try:
+                retry_dt = parsedate_to_datetime(str(retry_after_raw))
+                if retry_dt.tzinfo is None:
+                    retry_dt = retry_dt.replace(tzinfo=timezone.utc)
+                now = datetime.now(timezone.utc)
+                retry_after_seconds = max(0, int((retry_dt - now).total_seconds()))
+            except Exception:
+                retry_after_seconds = 0
+
+    return JSONResponse(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        headers={
+            "Retry-After": str(retry_after_seconds),
+        },
+        content={
+            "detail": "Rate limit exceeded",
+            "retry_after": retry_after_seconds,
+        },
+    )
+
+
+
+app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
+app.include_router(notes_router, prefix="/api/v1/notes", tags=["notes"])
+app.include_router(file_router, prefix="/api/v1/upload", tags=["upload"])
+app.include_router(public_notes_router, prefix="/api/v1/public", tags=["public"])

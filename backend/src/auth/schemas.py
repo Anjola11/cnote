@@ -11,7 +11,11 @@ class OtpTypes(str, Enum):
 class AuthUserOut(BaseModel):
     uid: uuid.UUID
     email: Optional[EmailStr] = None
-    email_verified: Optional[bool] = None
+    is_verified: Optional[bool] = None
+    display_name: Optional[str] = None
+    bio: Optional[str] = None
+    avatar_public_id: Optional[str] = None
+    avatar_url: Optional[str] = None
 
 class UserCreateInput(BaseModel):
     email: EmailStr
@@ -39,6 +43,12 @@ class ForgotPasswordInput(BaseModel):
 class ResetPasswordInput(BaseModel):
     reset_token: str
     new_password: str
+
+
+class ProfileUpdateInput(BaseModel):
+    display_name: Optional[str] = None
+    bio: Optional[str] = None
+    avatar_public_id: Optional[str] = None
 
 class RenewAccessTokenInput(BaseModel):
     refresh_token: str
@@ -69,3 +79,9 @@ class LogoutResponse(BaseModel):
     success: bool
     message: str
     data: dict[str, Any]
+
+
+class UserProfileResponse(BaseModel):
+    success: bool
+    message: str
+    data: AuthUserOut
