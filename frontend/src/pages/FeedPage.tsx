@@ -9,7 +9,6 @@ import CategoryFilter from '../components/feed/CategoryFilter';
 import { useNotes, useCreateNote, useDeleteNote } from '../hooks/useNotes';
 import { CATEGORY_OPTIONS } from '../types';
 import type { Category } from '../types';
-import Logo from '../components/ui/Logo';
 import CnoteLoader from '../components/ui/CnoteLoader';
 import DesktopSidebar from '../components/layout/DesktopSidebar';
 import './FeedPage.css';

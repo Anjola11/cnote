@@ -3,7 +3,6 @@ import Navbar from '../components/layout/Navbar';
 import CnoteLoader from '../components/ui/CnoteLoader';
 import Button from '../components/ui/Button';
 import { useRestoreNote, useDeletedNotes } from '../hooks/useNotes';
-import toast from 'react-hot-toast';
 import type { NoteListItem } from '../types';
 import DesktopSidebar from '../components/layout/DesktopSidebar';
 import './BinPage.css';

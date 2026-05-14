@@ -14,7 +14,7 @@ interface NavbarProps {
   isEditor?: boolean;
 }
 
-export default function Navbar({ hideOnDesktop, isEditor }: NavbarProps) {
+export default function Navbar({ hideOnDesktop }: NavbarProps) {
   const { user, logout } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
