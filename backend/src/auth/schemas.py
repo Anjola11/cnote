@@ -16,6 +16,7 @@ class AuthUserOut(BaseModel):
     bio: Optional[str] = None
     avatar_public_id: Optional[str] = None
     avatar_url: Optional[str] = None
+    preferences: Optional[dict[str, str]] = None
 
 class UserCreateInput(BaseModel):
     email: EmailStr

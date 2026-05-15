@@ -11,6 +11,18 @@
   display: flex;
   align-items: center;
   padding: 0 16px;
+  transition: all 0.3s ease;
+}
+
+.navbar--transparent {
+  background: transparent;
+  border-bottom-color: transparent;
+}
+
+.navbar--scrolled {
+  background: rgba(var(--bg-card-rgb), 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom-color: var(--border);
 }
 
 @media (min-width: 1024px) {

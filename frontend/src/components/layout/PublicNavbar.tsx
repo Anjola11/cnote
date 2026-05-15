@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Logo from '../ui/Logo';
@@ -6,9 +7,18 @@ import './Navbar.css';
 
 export default function PublicNavbar() {
   const { user, isLoading } = useAuth();
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 50);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   return (
-    <nav className="navbar">
+    <nav className={`navbar navbar--public ${scrolled ? 'navbar--scrolled' : 'navbar--transparent'}`}>
       <div className="navbar__inner">
         <Link to="/" className="navbar__brand">
           <Logo className="navbar__logo" />
