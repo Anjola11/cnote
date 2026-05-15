@@ -1,7 +1,6 @@
 import { useState, useCallback, useRef, useEffect, forwardRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { Editor } from '@tiptap/react';
-import type { Category } from '../../types';
 import './Toolbar.css';
 import ImageUploadModal from './ImageUploadModal';
 import ScriptureBlock from './ScriptureBlock';
