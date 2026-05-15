@@ -5,11 +5,13 @@ import { preferencesApi } from '../services/api';
 
 interface ThemeContextType {
   theme: Theme;
+  setTheme: React.Dispatch<React.SetStateAction<Theme>>;
   toggleTheme: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextType>({
   theme: 'light',
+  setTheme: () => {},
   toggleTheme: () => {},
 });
 
@@ -84,7 +86,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [user]);
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   );
