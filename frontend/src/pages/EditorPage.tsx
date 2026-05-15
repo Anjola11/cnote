@@ -174,7 +174,6 @@ export default function EditorPage() {
         {isEditing && (
           <Toolbar
             editor={editorInstance}
-            category={note.category as Category}
             noteId={id!}
           />
         )}

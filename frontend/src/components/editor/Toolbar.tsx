@@ -8,7 +8,6 @@ import ScriptureBlock from './ScriptureBlock';
 
 interface ToolbarProps {
   editor: Editor | null;
-  category: Category;
   noteId: string;
   onScriptureClick?: () => void;
 }
@@ -120,7 +119,7 @@ function ToolbarPopover({ children, anchorRef, onClose }: { children: React.Reac
 
 /* ── main component ── */
 
-export default function Toolbar({ editor, category, noteId }: ToolbarProps) {
+export default function Toolbar({ editor, noteId }: ToolbarProps) {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [showLangPicker, setShowLangPicker] = useState(false);
