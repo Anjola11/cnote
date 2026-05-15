@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextResponse } from '@vercel/edge';
+import type { NextRequest } from '@vercel/edge';
 
 const BOT_AGENTS = [
   'twitterbot',
