@@ -3,10 +3,11 @@
   position: relative;
 }
 
-.note-card__top {
+.note-card__header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 12px;
   margin-bottom: 10px;
 }
 .note-card__date {
