@@ -5,7 +5,7 @@ from src.auth.schemas import ProfileUpdateInput
 from src.auth.services import AuthServices
 from src.db.main import get_session
 from src.fileUpload.main import FileUploadServices
-from src.fileUpload.schemas import AvatarUploadResponse
+from src.fileUpload.schemas import AvatarUploadResponse, NoteImageUploadResponse
 from src.utils.dependencies import get_verified_user
 from src.utils.responses import success_response
 from src.limiter import get_user_id_or_ip, limiter
@@ -49,4 +49,25 @@ async def upload_avatar(
             "url": upload_result.get("url"),
             "user": user,
         },
+    )
+
+
+@file_router.post("/note-image/{note_id}", response_model=NoteImageUploadResponse, status_code=status.HTTP_200_OK)
+@limiter.limit("50/minute", key_func=get_user_id_or_ip)
+async def upload_note_image(
+    note_id: str,
+    request: Request,
+    file: UploadFile = File(...),
+    current_user=Depends(get_verified_user),
+    file_upload_services: FileUploadServices = Depends(get_file_upload_services),
+):
+    upload_result = await file_upload_services.upload_note_image(
+        file=file,
+        user_id=current_user.uid,
+        note_id=note_id,
+    )
+
+    return success_response(
+        message="Image uploaded successfully",
+        data=upload_result,
     )

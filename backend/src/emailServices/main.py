@@ -79,12 +79,12 @@ class EmailServices:
         try:
             # Prepare inline logo attachment
             logo_path = STATIC_DIR / "logo.png"
-            inline_attachments = []
+            attachments = []
             
             if logo_path.exists():
                 with open(logo_path, "rb") as image_file:
                     encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
-                    inline_attachments.append(
+                    attachments.append(
                         SendTransacEmailRequestAttachmentItem(
                             content=encoded_string,
                             name="logo.png",
@@ -105,7 +105,8 @@ class EmailServices:
                         email=to_email
                     )
                 ],
-                inline_attachments=inline_attachments
+                # Pass the list to the 'attachment' parameter
+                attachment=attachments if attachments else None
             )
             print(f"Email sent to {to_email}: {subject}")
             return True

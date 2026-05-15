@@ -13,3 +13,18 @@ class AvatarUploadResponse(BaseModel):
     success: bool
     message: str
     data: AvatarUploadOut
+
+
+class NoteImageUploadOut(BaseModel):
+    public_id: str
+    url: str | None = None
+    size_bytes: int
+    height: int
+    width: int
+    format: str
+
+
+class NoteImageUploadResponse(BaseModel):
+    success: bool
+    message: str
+    data: NoteImageUploadOut
