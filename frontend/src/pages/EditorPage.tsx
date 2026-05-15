@@ -10,11 +10,11 @@ import Toolbar from '../components/editor/Toolbar';
 import RichEditor from '../components/editor/RichEditor';
 import Switch from '../components/ui/Switch';
 import SaveStatusIndicator from '../components/editor/SaveStatus';
-import ScriptureBlock from '../components/editor/ScriptureBlock';
 import { useNote, usePatchNote, useDeleteNote, useShareNote } from '../hooks/useNotes';
 import { useAutoSave } from '../hooks/useAutoSave';
+import { useLoader } from '../context/LoaderContext';
 import toast from 'react-hot-toast';
-import type { SaveStatus, ScriptureVerse, Category } from '../types';
+import type { SaveStatus, Category } from '../types';
 import type { Editor } from '@tiptap/react';
 import './EditorPage.css';
 
@@ -23,6 +23,7 @@ export default function EditorPage() {
   const { data: note, isLoading } = useNote(id!);
   const { mutate: mutatePatchNote } = usePatchNote();
   const deleteNote = useDeleteNote();
+  const { setIsLoading } = useLoader();
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState<object | null>(null);
@@ -43,7 +44,12 @@ export default function EditorPage() {
       setTitle(note.title || '');
       titleInitialized.current = true;
     }
-  }, [note]);
+    
+    // If we're done loading, ensure the global loader is off
+    if (!isLoading && note) {
+      setIsLoading(false);
+    }
+  }, [note, isLoading, setIsLoading]);
 
   useAutoSave(id!, content, setSaveStatus, isEditing);
 

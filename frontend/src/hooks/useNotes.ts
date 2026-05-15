@@ -37,6 +37,9 @@ export function useCreateNote() {
       queryClient.invalidateQueries({ queryKey: ['notes'] });
       navigate(`/editor/${note.id}`, { state: { isNew: true } });
     },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Failed to create note');
+    },
   });
 }
 

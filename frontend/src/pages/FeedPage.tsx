@@ -9,9 +9,9 @@ import CategoryFilter from '../components/feed/CategoryFilter';
 import { useNotes, useCreateNote, useDeleteNote } from '../hooks/useNotes';
 import { CATEGORY_OPTIONS } from '../types';
 import type { Category } from '../types';
-import CnoteLoader from '../components/ui/CnoteLoader';
 import DesktopSidebar from '../components/layout/DesktopSidebar';
 import CategorySelectModal from '../components/ui/CategorySelectModal';
+import { useLoader } from '../context/LoaderContext';
 import './FeedPage.css';
 
 
@@ -25,6 +25,7 @@ export default function FeedPage() {
   const { data: notes, isLoading } = useNotes(activeCategory || undefined);
   const createNote = useCreateNote();
   const deleteNote = useDeleteNote();
+  const { setIsLoading } = useLoader();
 
   const cardsRef = useRef<HTMLDivElement>(null);
   const fabRef = useRef<HTMLButtonElement>(null);
@@ -102,14 +103,18 @@ export default function FeedPage() {
     }
   };
   
-  const handleCreateNote = (category: Category) => {
+  const handleCreateNote = async (category: Category) => {
     setShowNewModal(false);
-    createNote.mutate(category);
+    setIsLoading(true);
+    try {
+      await createNote.mutateAsync(category);
+    } catch {
+      setIsLoading(false);
+      // toast is already handled by mutation if applicable, but let's be safe
+      // actually, useCreateNote doesn't have an onError toast yet.
+    }
   };
 
-  if (createNote.isPending) {
-    return <CnoteLoader />;
-  }
 
   return (
     <div className="feed-page">
