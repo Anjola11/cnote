@@ -6,6 +6,7 @@ interface SEOProps {
   image?: string;
   url?: string;
   type?: string;
+  noindex?: boolean;
 }
 
 const SEO = ({
@@ -14,6 +15,7 @@ const SEO = ({
   image = 'https://cnote.vercel.app/og-image.png', // Default OG image
   url = 'https://cnote.vercel.app',
   type = 'website',
+  noindex = false,
 }: SEOProps) => {
   const siteTitle = title.includes('Cnote') ? title : `${title} | Cnote`;
 
@@ -23,6 +25,7 @@ const SEO = ({
       <title>{siteTitle}</title>
       <meta name="description" content={description} />
       <link rel="canonical" href={url} />
+      <meta name="robots" content={noindex ? 'noindex, nofollow' : 'index, follow'} />
 
       {/* Open Graph / Facebook */}
       <meta property="og:type" content={type} />

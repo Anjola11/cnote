@@ -35,6 +35,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Replace Meta Description
     html = html.replace(/<meta name="description" content=".*?" \/>/g, `<meta name="description" content="${excerpt}" />`);
 
+    // Inject Robots Noindex (Strict requirement)
+    html = html.replace(/<meta name="robots" content=".*?" \/>/g, '<meta name="robots" content="noindex, nofollow" />');
+
     // Replace OG Tags
     html = html.replace(/<meta property="og:title" content=".*?" \/>/g, `<meta property="og:title" content="${fullTitle}" />`);
     html = html.replace(/<meta property="og:description" content=".*?" \/>/g, `<meta property="og:description" content="${excerpt}" />`);
@@ -52,13 +55,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (error) {
     console.error('OG Proxy Error:', error);
     
-    // Graceful fallback: return the original index.html
+    // Graceful fallback: return the original index.html but INJECT NOINDEX
     try {
       const protocol = req.headers['x-forwarded-proto'] || 'https';
       const host = req.headers['host'];
       const htmlResponse = await axios.get(`${protocol}://${host}/index.html`);
+      let html = htmlResponse.data;
+      html = html.replace(/<meta name="robots" content=".*?" \/>/g, '<meta name="robots" content="noindex, nofollow" />');
       res.setHeader('Content-Type', 'text/html');
-      return res.status(200).send(htmlResponse.data);
+      return res.status(200).send(html);
     } catch (fallbackError) {
       return res.status(500).send('Internal Server Error');
     }

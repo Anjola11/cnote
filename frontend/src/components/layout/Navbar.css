@@ -57,6 +57,28 @@
   }
 }
 
+.navbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.navbar__guest-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hide-mobile {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .hide-mobile {
+    display: block;
+  }
+}
+
 .navbar__hamburger {
   display: flex;
   align-items: center;

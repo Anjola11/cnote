@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /editor/
+Disallow: /feed
+Disallow: /bin
+Disallow: /profile
+Disallow: /public/note/
+
+Sitemap: https://cnote.vercel.app/sitemap.xml

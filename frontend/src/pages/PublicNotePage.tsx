@@ -82,6 +82,7 @@ export default function PublicNotePage() {
         title={note.title || 'Untitled Note'} 
         description={note.content_text || 'A public note on Cnote.'}
         url={`${window.location.origin}/public/note/${shareToken}`}
+        noindex={true}
       />
       <PublicNavbar />
 

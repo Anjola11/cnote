@@ -24,24 +24,22 @@ export default function PublicNavbar() {
           <Logo className="navbar__logo" />
         </Link>
 
-        <div className="navbar__actions" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          {!isLoading && (
-            <>
-              {user ? (
-                <Link to="/feed">
-                  <Button variant="primary" size="sm" icon="fa-solid fa-house">Dashboard</Button>
-                </Link>
-              ) : (
-                <>
-                  <Link to="/login" className="hide-mobile">
-                    <Button variant="ghost" size="sm">Log in</Button>
-                  </Link>
-                  <Link to="/signup">
-                    <Button variant="primary" size="sm">Get Started</Button>
-                  </Link>
-                </>
-              )}
-            </>
+        <div className="navbar__actions">
+          {user ? (
+            <Link to="/feed">
+              <Button variant="primary" size="sm" icon="fa-solid fa-house">
+                Dashboard
+              </Button>
+            </Link>
+          ) : (
+            <div className="navbar__guest-actions">
+              <Link to="/login" className="hide-mobile">
+                <Button variant="ghost" size="sm">Log in</Button>
+              </Link>
+              <Link to="/signup">
+                <Button variant="primary" size="sm">Get Started</Button>
+              </Link>
+            </div>
           )}
         </div>
       </div>
