@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authApi, fileApi, getUserErrorMessage } from '../services/api';
@@ -96,7 +96,7 @@ export default function ProfilePage() {
               onClick={handleAvatarClick}
               title="Click to change avatar"
             >
-              <img src={user.profile_picture_url} alt={user.display_name || user.username} />
+              <img src={user.avatar_url} alt={user.display_name || user.username} />
               <div className="profile-page__avatar-overlay">
                 <i className="fa-solid fa-camera" />
               </div>

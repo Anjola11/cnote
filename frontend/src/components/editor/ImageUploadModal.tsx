@@ -129,7 +129,7 @@ export default function ImageUploadModal({ isOpen, onClose, onInsert, noteId }: 
                   required
                 />
               </div>
-              <Button type="submit" variant="primary" block disabled={!imageUrl.trim()}>
+              <Button type="submit" variant="primary" fullWidth disabled={!imageUrl.trim()}>
                 Insert Image
               </Button>
             </form>

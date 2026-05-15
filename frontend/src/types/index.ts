@@ -29,6 +29,7 @@ export interface Note extends NoteListItem {
 export interface User {
   uid: string;
   email: string;
+  username: string;
   is_verified?: boolean;
   display_name?: string;
   bio?: string;
