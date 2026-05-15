@@ -4,9 +4,7 @@ import { gsap } from 'gsap';
 import { useAuth } from '../../context/AuthContext';
 import { useNotes, useCreateNote } from '../../hooks/useNotes';
 import Logo from '../ui/Logo';
-import Modal from '../ui/Modal';
 import CategorySelectModal from '../ui/CategorySelectModal';
-import { CATEGORY_OPTIONS } from '../../types';
 import type { Category } from '../../types';
 import './Navbar.css';
 
