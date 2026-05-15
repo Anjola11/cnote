@@ -18,6 +18,7 @@ from src.notes.schemas import (
     NoteShareUpdateBody,
     NotesListResponse,
     PublicNoteResponse,
+    PublicNoteMetaResponse,
     NoteTitleUpdateBody,
 )
 from src.notes.services import NoteServices
