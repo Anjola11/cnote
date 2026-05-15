@@ -3,10 +3,12 @@ import { createPortal } from 'react-dom';
 import type { Editor } from '@tiptap/react';
 import type { Category } from '../../types';
 import './Toolbar.css';
+import ImageUploadModal from './ImageUploadModal';
 
 interface ToolbarProps {
   editor: Editor | null;
   category: Category;
+  noteId: string;
   onScriptureClick?: () => void;
 }
 
@@ -117,10 +119,11 @@ function ToolbarPopover({ children, anchorRef, onClose }: { children: React.Reac
 
 /* ── main component ── */
 
-export default function Toolbar({ editor, category }: ToolbarProps) {
+export default function Toolbar({ editor, category, noteId }: ToolbarProps) {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [showLangPicker, setShowLangPicker] = useState(false);
+  const [showImageModal, setShowImageModal] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
 
   const linkBtnRef = useRef<HTMLButtonElement>(null);
@@ -149,15 +152,20 @@ export default function Toolbar({ editor, category }: ToolbarProps) {
         const viewport = window.visualViewport;
         if (!viewport) return;
         
-        // Calculate the bottom offset based on the visual viewport height
-        // window.innerHeight is the layout viewport (usually full screen)
-        // viewport.height is the part of the screen not covered by the keyboard
-        const offsetBottom = window.innerHeight - viewport.height;
+        // Accurate keyboard offset calculation:
+        // window.innerHeight is layout viewport height.
+        // viewport.height + viewport.offsetTop is the bottom edge of the visual viewport.
+        const offsetBottom = Math.max(0, window.innerHeight - (viewport.height + viewport.offsetTop));
         
+        // Apply the offset. We add 12px for the margin we want from the keyboard/bottom edge.
         toolbar.style.bottom = `${offsetBottom + 12}px`;
+        // Add a smooth transition for the bottom property
+        toolbar.style.transition = 'bottom 0.1s ease-out';
       };
 
       updateToolbarPosition();
+      
+      // Listen to both resize and scroll on visualViewport
       window.visualViewport.addEventListener('resize', updateToolbarPosition);
       window.visualViewport.addEventListener('scroll', updateToolbarPosition);
       
@@ -284,12 +292,16 @@ export default function Toolbar({ editor, category }: ToolbarProps) {
       <span className="toolbar__divider" />
 
       {/* Image */}
-      <ToolBtn active={false} onClick={() => {
-        const url = window.prompt('Image URL');
-        if (url) editor.chain().focus().setImage({ src: url }).run();
-      }} title="Insert Image">
+      <ToolBtn active={false} onClick={() => setShowImageModal(true)} title="Insert Image">
         <i className="fa-solid fa-image" />
       </ToolBtn>
+
+      <ImageUploadModal 
+        isOpen={showImageModal}
+        onClose={() => setShowImageModal(false)}
+        onInsert={(url) => editor.chain().focus().setImage({ src: url }).run()}
+        noteId={noteId}
+      />
 
       {/* Category-conditional tools */}
       {category === 'programming' && (
