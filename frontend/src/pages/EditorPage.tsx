@@ -8,6 +8,7 @@ import Modal from '../components/ui/Modal';
 import CnoteLoader from '../components/ui/CnoteLoader';
 import Toolbar from '../components/editor/Toolbar';
 import RichEditor from '../components/editor/RichEditor';
+import Switch from '../components/ui/Switch';
 import SaveStatusIndicator from '../components/editor/SaveStatus';
 import ScriptureBlock from '../components/editor/ScriptureBlock';
 import { useNote, usePatchNote, useDeleteNote, useShareNote } from '../hooks/useNotes';
@@ -234,18 +235,13 @@ export default function EditorPage() {
           </p>
           
           <div className="editor-page__share-toggle-container">
-            <label className="toggle-switch">
-              <input 
-                type="checkbox" 
-                checked={note.is_public} 
-                onChange={(e) => handleShareToggle(e.target.checked)}
-                disabled={shareNote.isPending}
-              />
-              <span className="toggle-slider"></span>
-            </label>
-            <span className="editor-page__share-status">
-              {note.is_public ? 'Public Access' : 'Private Access'}
-            </span>
+            <Switch
+              checked={note.is_public}
+              onChange={handleShareToggle}
+              disabled={shareNote.isPending}
+              label={note.is_public ? 'Public Access' : 'Private Access'}
+              id="share-toggle"
+            />
           </div>
 
           {note.is_public && note.share_token && (

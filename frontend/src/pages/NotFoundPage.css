@@ -5,20 +5,6 @@
   flex-direction: column;
 }
 
-.not-found-page__nav {
-  padding: 16px 24px;
-  display: flex;
-  align-items: center;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-nav);
-}
-
-.not-found-page__brand {
-  text-decoration: none;
-  display: flex;
-  align-items: center;
-}
-
 .not-found-page__main {
   flex: 1;
   display: flex;

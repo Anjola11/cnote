@@ -216,3 +216,32 @@
   padding-top: 24px;
   border-top: 1px solid var(--border);
 }
+
+.profile-page__card--preferences {
+  margin-top: 32px;
+}
+
+.profile-page__settings-list {
+  margin-top: 40px; /* Increased spacing between header and settings */
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.profile-page__setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+
+.profile-page__setting-info label {
+  display: block;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}

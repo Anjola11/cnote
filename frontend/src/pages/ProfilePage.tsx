@@ -159,14 +159,19 @@ export default function ProfilePage() {
           </form>
         </div>
 
-        <div className="profile-page__card" style={{ marginTop: '24px' }}>
+        <div className="profile-page__card profile-page__card--preferences">
           <div className="profile-page__header">
             <h2 className="profile-page__title">Preferences</h2>
             <p className="profile-page__sub">Customize your cnote experience.</p>
           </div>
-          <div className="profile-page__field-group" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0 }}>
-            <label style={{ margin: 0 }}>Theme Preference</label>
-            <ThemeToggle />
+          
+          <div className="profile-page__settings-list">
+            <div className="profile-page__setting-row">
+              <div className="profile-page__setting-info">
+                <label>Theme Preference</label>
+              </div>
+              <ThemeToggle />
+            </div>
           </div>
         </div>
       </main>

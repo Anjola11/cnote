@@ -1,16 +1,12 @@
 import { Link } from 'react-router-dom';
-import Logo from '../components/ui/Logo';
+import PublicNavbar from '../components/layout/PublicNavbar';
 import Button from '../components/ui/Button';
 import './NotFoundPage.css';
 
 export default function NotFoundPage() {
   return (
     <div className="not-found-page">
-      <nav className="not-found-page__nav">
-        <Link to="/" className="not-found-page__brand">
-          <Logo />
-        </Link>
-      </nav>
+      <PublicNavbar />
 
       <main className="not-found-page__main">
         <div className="not-found-page__content">

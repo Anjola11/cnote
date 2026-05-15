@@ -93,6 +93,27 @@ export function useShareNote() {
   return useMutation({
     mutationFn: ({ id, is_public }: { id: string; is_public: boolean }) =>
       notesApi.share(id, is_public),
+    onMutate: async (variables) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['note', variables.id] });
+
+      // Snapshot the previous value
+      const previousNote = queryClient.getQueryData(['note', variables.id]);
+
+      // Optimistically update the note
+      queryClient.setQueryData(['note', variables.id], (old: Note | undefined) => {
+        if (!old) return old;
+        return { ...old, is_public: variables.is_public };
+      });
+
+      return { previousNote };
+    },
+    onError: (_err, variables, context) => {
+      // Rollback to previous state
+      if (context?.previousNote) {
+        queryClient.setQueryData(['note', variables.id], context.previousNote);
+      }
+    },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['note', variables.id] });
       queryClient.invalidateQueries({ queryKey: ['notes'] });
