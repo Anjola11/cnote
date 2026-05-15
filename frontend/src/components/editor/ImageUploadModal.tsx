@@ -1,14 +1,14 @@
 import { useState, useRef, useCallback } from 'react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
-import { fileApi } from '../../services/api';
 import toast from 'react-hot-toast';
+import { pendingImageFiles } from './ImageComponent';
 import './ImageUploadModal.css';
 
 interface ImageUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onInsert: (url: string) => void;
+  onInsert: (attrs: { src: string; status?: 'uploading' | 'success'; width?: string }) => void;
   noteId: string;
 }
 
@@ -16,13 +16,12 @@ export default function ImageUploadModal({ isOpen, onClose, onInsert, noteId }: 
   const [activeTab, setActiveTab] = useState<'upload' | 'url'>('upload');
   const [imageUrl, setImageUrl] = useState('');
   const [isDragging, setIsDragging] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleUrlSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (imageUrl.trim()) {
-      onInsert(imageUrl.trim());
+      onInsert({ src: imageUrl.trim(), status: 'success' });
       setImageUrl('');
       onClose();
     }
@@ -39,17 +38,18 @@ export default function ImageUploadModal({ isOpen, onClose, onInsert, noteId }: 
       return;
     }
 
-    setIsUploading(true);
-    try {
-      const res = await fileApi.uploadNoteImage(noteId, file);
-      onInsert(res.data.url);
-      onClose();
-      toast.success('Image uploaded successfully!');
-    } catch (err: any) {
-      toast.error('Failed to upload image. Please try again.');
-    } finally {
-      setIsUploading(false);
-    }
+    // Optimistic UI Pattern
+    const blobUrl = URL.createObjectURL(file);
+    pendingImageFiles.set(blobUrl, file);
+    
+    // Insert with local preview instantly
+    onInsert({ 
+      src: blobUrl, 
+      status: 'uploading',
+      width: '100%' 
+    });
+    
+    onClose();
   };
 
   const onDragOver = useCallback((e: React.DragEvent) => {
@@ -90,7 +90,7 @@ export default function ImageUploadModal({ isOpen, onClose, onInsert, noteId }: 
         <div className="image-upload-modal__content">
           {activeTab === 'upload' ? (
             <div 
-              className={`image-upload-modal__dropzone ${isDragging ? 'image-upload-modal__dropzone--dragging' : ''} ${isUploading ? 'image-upload-modal__dropzone--uploading' : ''}`}
+              className={`image-upload-modal__dropzone ${isDragging ? 'image-upload-modal__dropzone--dragging' : ''}`}
               onDragOver={onDragOver}
               onDragLeave={onDragLeave}
               onDrop={onDrop}
@@ -103,18 +103,11 @@ export default function ImageUploadModal({ isOpen, onClose, onInsert, noteId }: 
                 style={{ display: 'none' }}
                 accept="image/*"
               />
-              {isUploading ? (
-                <div className="image-upload-modal__status">
-                  <i className="fa-solid fa-circle-notch fa-spin" />
-                  <p>Uploading image...</p>
-                </div>
-              ) : (
-                <>
-                  <i className="fa-solid fa-cloud-arrow-up" />
-                  <p className="image-upload-modal__drop-text">Drag and drop an image, or click to browse</p>
-                  <p className="image-upload-modal__hint">Supports JPG, PNG, WebP (Max 5MB)</p>
-                </>
-              )}
+              <>
+                <i className="fa-solid fa-cloud-arrow-up" />
+                <p className="image-upload-modal__drop-text">Drag and drop an image, or click to browse</p>
+                <p className="image-upload-modal__hint">Supports JPG, PNG, WebP (Max 5MB)</p>
+              </>
             </div>
           ) : (
             <form className="image-upload-modal__url-form" onSubmit={handleUrlSubmit}>

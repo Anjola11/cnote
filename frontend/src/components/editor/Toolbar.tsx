@@ -299,7 +299,7 @@ export default function Toolbar({ editor, category, noteId }: ToolbarProps) {
       <ImageUploadModal 
         isOpen={showImageModal}
         onClose={() => setShowImageModal(false)}
-        onInsert={(url) => editor.chain().focus().setImage({ src: url }).run()}
+        onInsert={(attrs) => editor.chain().focus().setImage(attrs as any).run()}
         noteId={noteId}
       />
 

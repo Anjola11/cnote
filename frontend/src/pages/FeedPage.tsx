@@ -179,6 +179,17 @@ export default function FeedPage() {
           </div>
         )}
       </main>
+      
+      {/* Floating Action Button */}
+      <button 
+        ref={fabRef}
+        className="feed-fab" 
+        onClick={() => createNote.mutate('general')}
+        title="New Note"
+        aria-label="New Note"
+      >
+        <i className="fa-solid fa-plus" />
+      </button>
 
 
 

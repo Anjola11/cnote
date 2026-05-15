@@ -4,7 +4,6 @@ import Underline from '@tiptap/extension-underline';
 import { TextStyle } from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
 import Link from '@tiptap/extension-link';
-import Image from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 import { common, createLowlight } from 'lowlight';
@@ -13,6 +12,7 @@ import vhdl from 'highlight.js/lib/languages/vhdl';
 import x86asm from 'highlight.js/lib/languages/x86asm';
 import { useEffect } from 'react';
 import CodeBlockComponent from './CodeBlockComponent';
+import { CustomImage } from './ImageExtension';
 import { Scripture } from './ScriptureExtension';
 import './RichEditor.css';
 
@@ -55,7 +55,7 @@ export default function RichEditor({ content, onUpdate, onEditorReady, editable 
           class: 'editor-link',
         },
       }),
-      Image.configure({
+      CustomImage.configure({
         inline: false,
         allowBase64: true,
       }),
