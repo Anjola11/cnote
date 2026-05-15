@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { authApi, getUserErrorMessage } from '../services/api';
+import { authApi, fileApi, getUserErrorMessage } from '../services/api';
 import toast from 'react-hot-toast';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
@@ -17,6 +17,8 @@ export default function ProfilePage() {
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
   const [loading, setLoading] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (user) {
@@ -24,6 +26,32 @@ export default function ProfilePage() {
       setBio(user.bio || '');
     }
   }, [user]);
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file.');
+      return;
+    }
+
+    setUploadingAvatar(true);
+    const toastId = toast.loading('Uploading avatar...');
+    try {
+      const res = await fileApi.uploadAvatar(file);
+      setUser(res.data.user);
+      toast.success('Avatar updated!', { id: toastId });
+    } catch (err: any) {
+      toast.error(getUserErrorMessage(err, 'Failed to upload avatar.'), { id: toastId });
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,6 +88,38 @@ export default function ProfilePage() {
           <div className="profile-page__header">
             <h1 className="profile-page__title">Account Settings</h1>
             <p className="profile-page__sub">Manage your profile and account preferences.</p>
+          </div>
+
+          <div className="profile-page__avatar-section">
+            <div 
+              className={`profile-page__avatar-container ${uploadingAvatar ? 'profile-page__avatar-container--uploading' : ''}`}
+              onClick={handleAvatarClick}
+              title="Click to change avatar"
+            >
+              <img src={user.profile_picture_url} alt={user.display_name || user.username} />
+              <div className="profile-page__avatar-overlay">
+                <i className="fa-solid fa-camera" />
+              </div>
+              {uploadingAvatar && (
+                <div className="profile-page__avatar-loader">
+                  <i className="fa-solid fa-circle-notch fa-spin" />
+                </div>
+              )}
+            </div>
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              onChange={handleAvatarChange} 
+              style={{ display: 'none' }} 
+              accept="image/*" 
+            />
+            <div className="profile-page__avatar-info">
+              <h3>Profile Picture</h3>
+              <p>JPG, PNG or WebP. Max 8MB.</p>
+              <Button variant="ghost" size="sm" onClick={handleAvatarClick} disabled={uploadingAvatar}>
+                Change Picture
+              </Button>
+            </div>
           </div>
 
           <form className="profile-page__form" onSubmit={handleSubmit}>

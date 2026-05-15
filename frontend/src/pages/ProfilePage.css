@@ -43,6 +43,110 @@
   font-size: 15px;
 }
 
+.profile-page__avatar-section {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 40px;
+  padding: 20px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+}
+
+@media (max-width: 480px) {
+  .profile-page__avatar-section {
+    flex-direction: column;
+    text-align: center;
+    padding: 24px 16px;
+  }
+}
+
+.profile-page__avatar-container {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  cursor: pointer;
+  overflow: hidden;
+  border: 4px solid var(--bg-card);
+  box-shadow: var(--shadow-md);
+  flex-shrink: 0;
+}
+
+.profile-page__avatar-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.profile-page__avatar-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.profile-page__avatar-overlay i {
+  color: white;
+  font-size: 24px;
+}
+
+.profile-page__avatar-container:hover .profile-page__avatar-overlay {
+  opacity: 1;
+}
+
+.profile-page__avatar-container:hover img {
+  transform: scale(1.1);
+}
+
+.profile-page__avatar-loader {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(var(--bg-card-rgb), 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.profile-page__avatar-loader i {
+  font-size: 24px;
+  color: var(--accent);
+}
+
+.profile-page__avatar-container--uploading {
+  pointer-events: none;
+}
+
+.profile-page__avatar-info {
+  flex: 1;
+}
+
+.profile-page__avatar-info h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.profile-page__avatar-info p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
 .profile-page__content {
   background: var(--bg-card);
   border: 1px solid var(--border);
