@@ -10,9 +10,9 @@ interface CategoryFilterProps {
 
 const FILTERS: { value: Category | null; icon: string; label: string; color?: string }[] = [
   { value: null, icon: 'fa-solid fa-layer-group', label: 'All Entries' },
+  { value: 'general', icon: 'fa-solid fa-feather', label: 'General', color: 'var(--cat-general)' },
   { value: 'programming', icon: 'fa-solid fa-code', label: 'Programming', color: 'var(--cat-prog)' },
   { value: 'spiritual', icon: 'fa-solid fa-book-bible', label: 'Spiritual', color: 'var(--cat-spirit)' },
-  { value: 'general', icon: 'fa-solid fa-feather', label: 'General', color: 'var(--cat-general)' },
 ];
 
 export default function CategoryFilter({ active, onChange, variant = 'sidebar' }: CategoryFilterProps) {

@@ -307,85 +307,80 @@ export default function Toolbar({ editor, category, noteId }: ToolbarProps) {
         noteId={noteId}
       />
 
-      {/* Category-conditional tools */}
-      {category === 'programming' && (
-        <div className="toolbar__lang-wrapper">
-          <ToolBtn
-            ref={langBtnRef}
-            active={editor.isActive('codeBlock')}
-            onClick={() => {
-              if (editor.isActive('codeBlock')) {
-                editor.chain().focus().toggleCodeBlock().run();
-              } else {
-                setShowLangPicker(!showLangPicker);
-              }
-            }}
-            title="Code Block"
-          >
-            <i className="fa-solid fa-terminal" />
-          </ToolBtn>
-          {showLangPicker && (
-            <ToolbarPopover anchorRef={langBtnRef} onClose={() => setShowLangPicker(false)}>
-              <div className="toolbar__lang-popover">
-                {['javascript', 'typescript', 'rust', 'go', 'python', 'cpp', 'csharp', 'verilog', 'vhdl', 'x86asm'].map(lang => (
-                  <button
-                    key={lang}
-                    className="toolbar__lang-option"
-                    onClick={() => {
-                      editor.chain().focus().toggleCodeBlock({ language: lang }).run();
-                      setShowLangPicker(false);
-                    }}
-                    type="button"
-                  >
-                    {lang}
-                  </button>
-                ))}
+      <div className="toolbar__lang-wrapper">
+        <ToolBtn
+          ref={langBtnRef}
+          active={editor.isActive('codeBlock')}
+          onClick={() => {
+            if (editor.isActive('codeBlock')) {
+              editor.chain().focus().toggleCodeBlock().run();
+            } else {
+              setShowLangPicker(!showLangPicker);
+            }
+          }}
+          title="Code Block"
+        >
+          <i className="fa-solid fa-terminal" />
+        </ToolBtn>
+        {showLangPicker && (
+          <ToolbarPopover anchorRef={langBtnRef} onClose={() => setShowLangPicker(false)}>
+            <div className="toolbar__lang-popover">
+              {['javascript', 'typescript', 'rust', 'go', 'python', 'cpp', 'csharp', 'verilog', 'vhdl', 'x86asm'].map(lang => (
                 <button
+                  key={lang}
                   className="toolbar__lang-option"
                   onClick={() => {
-                    editor.chain().focus().toggleCodeBlock().run();
+                    editor.chain().focus().toggleCodeBlock({ language: lang }).run();
                     setShowLangPicker(false);
                   }}
                   type="button"
                 >
-                  auto
+                  {lang}
                 </button>
-              </div>
-            </ToolbarPopover>
-          )}
-        </div>
-      )}
-      {/* Category-conditional tools */}
-      {category === 'spiritual' && (
-        <div className="toolbar__scripture-wrapper">
-          <ToolBtn
-            ref={scriptureBtnRef}
-            active={showScripturePopover}
-            onClick={() => setShowScripturePopover(!showScripturePopover)}
-            title="Insert Scripture"
-          >
-            <i className="fa-solid fa-book-bible" />
-          </ToolBtn>
-          
-          <ScriptureBlock
-            isOpen={showScripturePopover}
-            onClose={() => setShowScripturePopover(false)}
-            onInsert={(verse) => {
-              if (!editor) return;
-              editor.chain().focus().insertContent({
-                type: 'scripture',
-                attrs: {
-                  reference: verse.reference,
-                  translation: verse.translation,
-                  text: verse.text,
-                },
-              }).run();
-              setShowScripturePopover(false);
-            }}
-            anchorRef={scriptureBtnRef}
-          />
-        </div>
-      )}
+              ))}
+              <button
+                className="toolbar__lang-option"
+                onClick={() => {
+                  editor.chain().focus().toggleCodeBlock().run();
+                  setShowLangPicker(false);
+                }}
+                type="button"
+              >
+                auto
+              </button>
+            </div>
+          </ToolbarPopover>
+        )}
+      </div>
+
+      <div className="toolbar__scripture-wrapper">
+        <ToolBtn
+          ref={scriptureBtnRef}
+          active={showScripturePopover}
+          onClick={() => setShowScripturePopover(!showScripturePopover)}
+          title="Insert Scripture"
+        >
+          <i className="fa-solid fa-book-bible" />
+        </ToolBtn>
+        
+        <ScriptureBlock
+          isOpen={showScripturePopover}
+          onClose={() => setShowScripturePopover(false)}
+          onInsert={(verse) => {
+            if (!editor) return;
+            editor.chain().focus().insertContent({
+              type: 'scripture',
+              attrs: {
+                reference: verse.reference,
+                translation: verse.translation,
+                text: verse.text,
+              },
+            }).run();
+            setShowScripturePopover(false);
+          }}
+          anchorRef={scriptureBtnRef}
+        />
+      </div>
     </div>
   );
 }
