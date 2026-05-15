@@ -13,30 +13,28 @@ export default function ScriptureComponent({
 
   return (
     <NodeViewWrapper className="scripture-block" data-gramm="false">
-      <div className="scripture-block__header" contentEditable={false}>
-        <div className="scripture-block__info">
-          <i className="fa-solid fa-book-bible scripture-block__icon" />
-          <span className="scripture-block__ref">{reference} ({translation})</span>
-        </div>
-        {editor.isEditable && (
-          <button
-            className="scripture-block__delete"
-            type="button"
-            title="Remove scripture"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              (e.currentTarget as HTMLButtonElement).blur();
-              setShowDeleteConfirm(true);
-            }}
-          >
-            <i className="fa-solid fa-xmark" />
-          </button>
-        )}
-      </div>
-
       <div className="scripture-block__content">
-        <p className="scripture-block__text italic">"{text}"</p>
+        <p className="scripture-block__text">"{text}"</p>
+        
+        <div className="scripture-block__attribution" contentEditable={false}>
+          <span className="scripture-block__ref">— {reference} ({translation})</span>
+          
+          {editor.isEditable && (
+            <button
+              className="scripture-block__delete"
+              type="button"
+              title="Remove scripture"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                (e.currentTarget as HTMLButtonElement).blur();
+                setShowDeleteConfirm(true);
+              }}
+            >
+              <i className="fa-solid fa-trash-can" />
+            </button>
+          )}
+        </div>
       </div>
 
       <ConfirmModal

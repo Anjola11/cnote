@@ -4,6 +4,7 @@ import type { Editor } from '@tiptap/react';
 import type { Category } from '../../types';
 import './Toolbar.css';
 import ImageUploadModal from './ImageUploadModal';
+import ScriptureBlock from './ScriptureBlock';
 
 interface ToolbarProps {
   editor: Editor | null;
@@ -129,6 +130,9 @@ export default function Toolbar({ editor, category, noteId }: ToolbarProps) {
   const linkBtnRef = useRef<HTMLButtonElement>(null);
   const colorBtnRef = useRef<HTMLButtonElement>(null);
   const langBtnRef = useRef<HTMLButtonElement>(null);
+  const scriptureBtnRef = useRef<HTMLButtonElement>(null);
+
+  const [showScripturePopover, setShowScripturePopover] = useState(false);
 
   const applyLink = useCallback(() => {
     if (!editor) return;
@@ -352,14 +356,36 @@ export default function Toolbar({ editor, category, noteId }: ToolbarProps) {
         </div>
       )}
       {/* Category-conditional tools */}
-      {/* Scripture Component temporarily disabled per instruction */}
-      {/* 
-      {category === 'spiritual' && onScriptureClick && (
-        <ToolBtn active={false} onClick={onScriptureClick} title="Insert Scripture">
-          <i className="fa-solid fa-book-bible" />
-        </ToolBtn>
-      )} 
-      */}
+      {category === 'spiritual' && (
+        <div className="toolbar__scripture-wrapper">
+          <ToolBtn
+            ref={scriptureBtnRef}
+            active={showScripturePopover}
+            onClick={() => setShowScripturePopover(!showScripturePopover)}
+            title="Insert Scripture"
+          >
+            <i className="fa-solid fa-book-bible" />
+          </ToolBtn>
+          
+          <ScriptureBlock
+            isOpen={showScripturePopover}
+            onClose={() => setShowScripturePopover(false)}
+            onInsert={(verse) => {
+              if (!editor) return;
+              editor.chain().focus().insertContent({
+                type: 'scripture',
+                attrs: {
+                  reference: verse.reference,
+                  translation: verse.translation,
+                  text: verse.text,
+                },
+              }).run();
+              setShowScripturePopover(false);
+            }}
+            anchorRef={scriptureBtnRef}
+          />
+        </div>
+      )}
     </div>
   );
 }

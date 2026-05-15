@@ -28,7 +28,6 @@ export default function EditorPage() {
   const [content, setContent] = useState<object | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showScriptureModal, setShowScriptureModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -67,17 +66,6 @@ export default function EditorPage() {
     setEditorInstance(editor);
   }, []);
 
-  const handleScriptureInsert = useCallback((verse: ScriptureVerse) => {
-    if (!editorInstance) return;
-    editorInstance.chain().focus().insertContent({
-      type: 'scripture',
-      attrs: {
-        reference: verse.reference,
-        translation: verse.translation,
-        text: verse.text,
-      },
-    }).run();
-  }, [editorInstance]);
 
   const handleDelete = () => {
     setShowDeleteModal(false);
@@ -182,7 +170,6 @@ export default function EditorPage() {
             editor={editorInstance}
             category={note.category as Category}
             noteId={id!}
-            onScriptureClick={() => setShowScriptureModal(true)}
           />
         )}
 
@@ -267,11 +254,6 @@ export default function EditorPage() {
         </div>
       </Modal>
 
-      <ScriptureBlock
-        isOpen={showScriptureModal}
-        onClose={() => setShowScriptureModal(false)}
-        onInsert={handleScriptureInsert}
-      />
     </div>
   );
 }

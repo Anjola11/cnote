@@ -1,101 +1,65 @@
 .scripture-block {
-  margin: 2rem 0;
-  background: rgba(124, 58, 237, 0.03); /* Very subtle purple tint */
-  border: 1px solid rgba(124, 58, 237, 0.2);
-  border-left: 4px solid #7C3AED;
-  border-radius: 12px;
+  margin: 1.5rem 0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius-md);
   overflow: hidden;
-  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.08);
-  transition: transform 0.2s ease;
+  transition: border-color 0.2s ease;
 }
 
-@media (max-width: 799px) {
-  .scripture-block {
-    border-radius: 8px;
-  }
+[data-theme='dark'] .scripture-block {
+  background: #1a1a18; /* Darker gray for dark mode */
 }
 
-.scripture-block__header {
+.scripture-block__content {
+  padding: 16px 20px;
+}
+
+.scripture-block__text {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--text-primary);
+  font-style: italic;
+  font-family: var(--font-body);
+}
+
+.scripture-block__attribution {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 8px 16px;
-  background: rgba(124, 58, 237, 0.1);
-  border-bottom: 1px solid rgba(124, 58, 237, 0.1);
-}
-
-.scripture-block__info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.scripture-block__icon {
-  color: #7C3AED;
-  font-size: 14px;
+  justify-content: flex-end;
+  gap: 12px;
+  user-select: none;
 }
 
 .scripture-block__ref {
-  font-family: var(--font-heading);
   font-size: 13px;
-  font-weight: 700;
-  color: #7C3AED;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.2px;
 }
 
 .scripture-block__delete {
   background: transparent;
   border: none;
-  color: rgba(0, 0, 0, 0.3);
+  color: var(--text-muted);
   cursor: pointer;
-  font-size: 16px;
+  font-size: 14px;
   padding: 4px;
   border-radius: 4px;
   transition: all 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
+  opacity: 0;
 }
 
-.dark .scripture-block__delete {
-  color: rgba(255, 255, 255, 0.4);
+.scripture-block:hover .scripture-block__delete {
+  opacity: 1;
 }
 
 .scripture-block__delete:hover {
-  color: #ef4444;
-  background: rgba(239, 68, 68, 0.1);
-}
-
-.scripture-block__content {
-  padding: 16px;
-  max-height: 250px;
-  overflow-y: auto;
-}
-
-/* Custom scrollbar for scripture blocks */
-.scripture-block__content::-webkit-scrollbar {
-  width: 6px;
-}
-
-.scripture-block__content::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.scripture-block__content::-webkit-scrollbar-thumb {
-  background: rgba(124, 58, 237, 0.2);
-  border-radius: 3px;
-}
-
-.scripture-block__content::-webkit-scrollbar-thumb:hover {
-  background: rgba(124, 58, 237, 0.3);
-}
-
-.scripture-block__text {
-  margin: 0;
-  font-size: 16px;
-  line-height: 1.6;
-  color: var(--text-primary);
-}
-
-.italic {
-  font-style: italic;
+  color: var(--danger);
+  background: rgba(220, 38, 38, 0.1);
 }
