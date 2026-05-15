@@ -6,7 +6,7 @@ import Button from '../ui/Button';
 import './Navbar.css';
 
 export default function PublicNavbar() {
-  const { user, isLoading } = useAuth();
+  const { user } = useAuth();
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
