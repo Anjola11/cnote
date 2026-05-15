@@ -49,21 +49,24 @@ function AppRoutes() {
   );
 }
 
+import { HelmetProvider } from 'react-helmet-async';
 import { LoaderProvider } from './context/LoaderContext';
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <LoaderProvider>
-          <ThemeProvider>
-            <BrowserRouter>
-              <Toaster position="top-center" toastOptions={{ style: { background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border)' } }} />
-              <AppRoutes />
-            </BrowserRouter>
-          </ThemeProvider>
-        </LoaderProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <HelmetProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <LoaderProvider>
+            <ThemeProvider>
+              <BrowserRouter>
+                <Toaster position="top-center" toastOptions={{ style: { background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border)' } }} />
+                <AppRoutes />
+              </BrowserRouter>
+            </ThemeProvider>
+          </LoaderProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </HelmetProvider>
   );
 }

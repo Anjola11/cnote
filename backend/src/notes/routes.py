@@ -243,3 +243,13 @@ async def get_public_note(
 ):
     result = await note_services.get_public_note(share_token=share_token, session=session)
     return success_response(message="Public note fetched successfully", data=result)
+@public_notes_router.get("/notes/{share_token}/meta", response_model=PublicNoteMetaResponse, status_code=status.HTTP_200_OK)
+@limiter.limit("60/minute")
+async def get_public_note_meta(
+    request: Request,
+    share_token: str,
+    session: AsyncSession = Depends(get_session),
+    note_services: NoteServices = Depends(get_note_services),
+):
+    result = await note_services.get_public_note_meta(share_token=share_token, session=session)
+    return success_response(message="Metadata fetched successfully", data=result)

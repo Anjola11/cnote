@@ -4,6 +4,7 @@ import FeaturesSection from '../components/landing/FeaturesSection';
 import FooterSection from '../components/landing/FooterSection';
 import PublicNavbar from '../components/layout/PublicNavbar';
 import ScrollTrigger from 'gsap/ScrollTrigger';
+import SEO from '../components/common/SEO';
 import './LandingPage.css';
 
 export default function LandingPage() {
@@ -28,6 +29,7 @@ export default function LandingPage() {
 
   return (
     <div className="landing">
+      <SEO />
       <PublicNavbar />
       <HeroSection />
       <FeaturesSection />

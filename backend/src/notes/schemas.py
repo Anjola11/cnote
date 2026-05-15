@@ -144,6 +144,17 @@ class PublicNoteOut(BaseModel):
     avatar_url: str | None = None
 
 
+class PublicNoteMetaOut(BaseModel):
+    title: str | None = None
+    excerpt: str | None = None
+
+
+class PublicNoteMetaResponse(BaseModel):
+    success: bool
+    message: str
+    data: PublicNoteMetaOut
+
+
 class PublicNoteResponse(BaseModel):
     success: bool
     message: str

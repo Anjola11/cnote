@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { publicApi } from '../services/api';
@@ -18,6 +17,7 @@ import { ReactNodeViewRenderer } from '@tiptap/react';
 import { Scripture } from '../components/editor/ScriptureExtension';
 import PublicNavbar from '../components/layout/PublicNavbar';
 import Logo from '../components/ui/Logo';
+import SEO from '../components/common/SEO';
 import './PublicNotePage.css';
 
 const lowlight = createLowlight(common);
@@ -53,16 +53,6 @@ export default function PublicNotePage() {
     editable: false, // strictly read-only
   }, [note?.content]);
 
-  useEffect(() => {
-    // Inject noindex meta tag dynamically
-    const meta = document.createElement('meta');
-    meta.name = 'robots';
-    meta.content = 'noindex';
-    document.head.appendChild(meta);
-    return () => {
-      document.head.removeChild(meta);
-    };
-  }, []);
 
   if (isLoading) {
     return <CnoteLoader message="Loading note..." />;
@@ -88,6 +78,11 @@ export default function PublicNotePage() {
 
   return (
     <div className="public-note-page">
+      <SEO 
+        title={note.title || 'Untitled Note'} 
+        description={note.content_text || 'A public note on Cnote.'}
+        url={`${window.location.origin}/public/note/${shareToken}`}
+      />
       <PublicNavbar />
 
       <main className="public-note__main">

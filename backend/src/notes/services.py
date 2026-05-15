@@ -425,3 +425,26 @@ class NoteServices:
             )
 
         return self._serialize_public_note(note_with_author)
+
+    async def get_public_note_meta(self, share_token: str, session: AsyncSession) -> dict:
+        result = await session.exec(
+            select(Note.title, Note.content_text)
+            .where(
+                Note.share_token == share_token,
+                Note.is_public == True,
+                Note.deleted_at == None,
+            )
+        )
+        note_meta = result.first()
+
+        if not note_meta:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Public note metadata not found",
+            )
+
+        title, content_text = note_meta
+        return {
+            "title": title or "Untitled Note",
+            "excerpt": (content_text[:160] + "...") if content_text and len(content_text) > 160 else (content_text or "No content available."),
+        }
