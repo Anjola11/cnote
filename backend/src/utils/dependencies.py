@@ -1,5 +1,6 @@
 from fastapi import HTTPException, status, Depends, Request
 from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlalchemy.orm import selectinload
 from src.utils.auth import decode_token
 from src.db.main import get_session
 from src.auth.models import User
@@ -63,7 +64,7 @@ async def get_current_user(
             detail="Invalid user ID format"
         )
         
-    statement = select(User).where(User.uid == parsed_uid)
+    statement = select(User).where(User.uid == parsed_uid).options(selectinload(User.preferences))
     result = await session.exec(statement)
     user = result.first()
     
@@ -97,4 +98,3 @@ async def get_verified_user_id(
     current_user = Depends(get_verified_user)
 ):
     return current_user.uid
-

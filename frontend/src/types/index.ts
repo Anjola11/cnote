@@ -6,7 +6,7 @@ export const CATEGORY_OPTIONS: { value: Category; icon: string; title: string; s
   { value: 'spiritual', icon: 'fa-solid fa-book-bible', title: 'Spiritual', sub: 'Scriptures, prayers, or insights.' },
 ];
 export type SaveStatus = 'idle' | 'unsaved' | 'saving' | 'saved' | 'error';
-export type Theme = 'light' | 'dark';
+export type Theme = 'light' | 'dark' | 'system';
 
 export interface NoteListItem {
   id: string;
@@ -34,6 +34,7 @@ export interface User {
   display_name?: string;
   bio?: string;
   avatar_url?: string;
+  preferences?: Record<string, string>;
 }
 
 export interface ScriptureVerse {

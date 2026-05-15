@@ -47,6 +47,7 @@ class AuthServices:
             "bio": user.bio,
             "avatar_public_id": user.avatar_public_id,
             "avatar_url": user.profile_picture_url,
+            "preferences": {p.key: p.value for p in (user.preferences or [])}
         }
 
     def _get_user_token_data(self, user: User) -> dict:

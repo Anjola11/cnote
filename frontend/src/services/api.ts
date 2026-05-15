@@ -143,6 +143,12 @@ export function getUserErrorMessage(err: any, fallback = 'Something went wrong. 
   return fallback;
 }
 
+export const preferencesApi = {
+  get: () => 
+    api.get('/preferences/').then(r => r.data.data),
+  update: (key: string, value: string) => 
+    api.patch('/preferences/', { key, value }).then(r => r.data.data),
+};
 
 export const notesApi = {
   list: (category?: Category) =>
