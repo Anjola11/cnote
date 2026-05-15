@@ -7,8 +7,8 @@ interface LogoProps {
 }
 
 export default function Logo({ className }: LogoProps) {
-  const { theme } = useTheme();
-  const logoSrc = theme === 'dark' ? logoDark : logoLight;
+  const { isDark } = useTheme();
+  const logoSrc = isDark ? logoDark : logoLight;
 
   return <img src={logoSrc} alt="cnote" className={className} />;
 }

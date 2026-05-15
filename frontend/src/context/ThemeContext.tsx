@@ -5,12 +5,14 @@ import { preferencesApi } from '../services/api';
 
 interface ThemeContextType {
   theme: Theme;
+  isDark: boolean;
   setTheme: React.Dispatch<React.SetStateAction<Theme>>;
   toggleTheme: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextType>({
   theme: 'light',
+  isDark: false,
   setTheme: () => {},
   toggleTheme: () => {},
 });
@@ -18,14 +20,17 @@ const ThemeContext = createContext<ThemeContextType>({
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [theme, setTheme] = useState<Theme>(() => {
-    // Initial load: prefer user settings, then local storage, then system
     const stored = localStorage.getItem('cnote-theme') as Theme | null;
     if (stored === 'dark' || stored === 'light' || stored === 'system') return stored;
     return 'system';
   });
 
   // Track the resolved theme (light/dark) for the data-theme attribute
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
+  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(() => {
+    const stored = localStorage.getItem('cnote-theme') as Theme | null;
+    if (stored === 'dark' || stored === 'light') return stored;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  });
 
   // Effect to sync with user preferences once they are loaded
   useEffect(() => {
@@ -86,7 +91,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [user]);
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, isDark: resolvedTheme === 'dark', setTheme, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   );
