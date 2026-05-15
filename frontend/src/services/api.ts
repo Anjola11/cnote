@@ -71,6 +71,12 @@ function mapToUserMessage(_status: number, raw: string): { message: string; acti
   if (lower.includes('rate limit') || lower.includes('too many')) {
     return { message: 'Too many attempts. Please wait a moment and try again.' };
   }
+  if (lower.includes('file type') || lower.includes('mime type') || lower.includes('octet-stream') || lower.includes('format')) {
+    return { message: 'This file format is not supported. Please use a standard image like JPEG or PNG.' };
+  }
+  if (lower.includes('size') && lower.includes('exceeds')) {
+    return { message: 'The file is too large. Please upload an image smaller than 10MB.' };
+  }
 
   return null;
 }

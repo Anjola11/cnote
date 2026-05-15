@@ -5,6 +5,7 @@ import { useNotes, useCreateNote } from '../../hooks/useNotes';
 import Logo from '../ui/Logo';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
+import CategorySelectModal from '../ui/CategorySelectModal';
 import { CATEGORY_OPTIONS } from '../../types';
 import type { Category } from '../../types';
 import './DesktopSidebar.css';
@@ -108,29 +109,11 @@ export default function DesktopSidebar() {
         </div>
       </aside>
 
-      <Modal
+      <CategorySelectModal
         isOpen={showNewModal}
         onClose={() => setShowNewModal(false)}
-        title="What kind of note?"
-      >
-        <div className="new-note-modal-options">
-          {CATEGORY_OPTIONS.map(opt => (
-            <button
-              key={opt.value}
-              className="new-note-modal-option"
-              onClick={() => handleCreate(opt.value)}
-            >
-              <div className={`new-note-modal-option-icon new-note-modal-option-icon--${opt.value}`}>
-                <i className={opt.icon} />
-              </div>
-              <div className="new-note-modal-option-text">
-                <strong>{opt.title}</strong>
-                <span>{opt.sub}</span>
-              </div>
-            </button>
-          ))}
-        </div>
-      </Modal>
+        onSelect={handleCreate}
+      />
     </>
   );
 }

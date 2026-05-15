@@ -14,7 +14,7 @@ class ImageCategory(str, Enum):
     NOTE_IMG = "NOTE_IMG"
 
 max_avatar_upload_size = 8
-max_note_img_upload_size = 5
+max_note_img_upload_size = 10
 
 cloudinary.config(
     cloud_name=Config.CLOUDINARY_CLOUD_NAME,
@@ -22,9 +22,19 @@ cloudinary.config(
     api_secret=Config.CLOUDINARY_API_SECRET
 )
 
-_magika = Magika(prediction_mode=PredictionMode.HIGH_CONFIDENCE)
+_magika = Magika()
 
-ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
+ALLOWED_MIME_TYPES = {
+    "image/jpeg", 
+    "image/png", 
+    "image/webp", 
+    "image/gif", 
+    "image/avif", 
+    "image/heic", 
+    "image/heif", 
+    "image/bmp", 
+    "image/tiff"
+}
 
 class FileUploadServices:
 
@@ -47,22 +57,24 @@ class FileUploadServices:
         # Read a header chunk and reset 
         header_data = await file.read(2048)
         await file.seek(0)
-
         
         result = _magika.identify_bytes(header_data)
-
-        if not result.ok:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Could not determine file type"
-            )
-
         real_mime = result.output.mime_type
+        
+        # Fallback for valid images that Magika might miss (e.g. strict confidence modes)
+        if real_mime == "application/octet-stream":
+            if header_data.startswith(b"\x89PNG\r\n\x1a\n"):
+                real_mime = "image/png"
+            elif header_data.startswith(b"\xff\xd8\xff"):
+                real_mime = "image/jpeg"
+            elif header_data.startswith(b"RIFF") and header_data[8:12] == b"WEBP":
+                real_mime = "image/webp"
 
         if real_mime not in ALLOWED_MIME_TYPES:
+            logger.error(f"Upload blocked: MIME type '{real_mime}' (Magika Label: {result.output.ct_label}) is not allowed.")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid file type. Only JPEG, PNG, and WebP are allowed."
+                detail="Invalid image format. Please upload a standard JPEG, PNG, WebP, or GIF."
             )
 
         file_size = await self.get_file_size(file)
@@ -153,4 +165,3 @@ class FileUploadServices:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"image delete failed:"
             )
-

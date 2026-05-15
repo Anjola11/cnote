@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNotes, useCreateNote } from '../../hooks/useNotes';
 import Logo from '../ui/Logo';
 import Modal from '../ui/Modal';
+import CategorySelectModal from '../ui/CategorySelectModal';
 import { CATEGORY_OPTIONS } from '../../types';
 import type { Category } from '../../types';
 import './Navbar.css';
@@ -127,7 +128,10 @@ export default function Navbar({ hideOnDesktop }: NavbarProps) {
           <div className="sidebar-drawer__new-action">
             <button 
               className="sidebar-drawer__new-btn"
-              onClick={() => setShowNewModal(true)}
+              onClick={() => {
+                setSidebarOpen(false);
+                setShowNewModal(true);
+              }}
             >
               <i className="fa-solid fa-plus" /> New Note
             </button>
@@ -188,29 +192,11 @@ export default function Navbar({ hideOnDesktop }: NavbarProps) {
       </div>
     )}
 
-      <Modal
+      <CategorySelectModal
         isOpen={showNewModal}
         onClose={() => setShowNewModal(false)}
-        title="What kind of note?"
-      >
-        <div className="new-note-modal-options">
-          {CATEGORY_OPTIONS.map(opt => (
-            <button
-              key={opt.value}
-              className="new-note-modal-option"
-              onClick={() => handleCreate(opt.value)}
-            >
-              <div className={`new-note-modal-option-icon new-note-modal-option-icon--${opt.value}`}>
-                <i className={opt.icon} />
-              </div>
-              <div className="new-note-modal-option-text">
-                <strong>{opt.title}</strong>
-                <span>{opt.sub}</span>
-              </div>
-            </button>
-          ))}
-        </div>
-      </Modal>
+        onSelect={handleCreate}
+      />
     </>
   );
 }

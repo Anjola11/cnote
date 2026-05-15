@@ -11,6 +11,7 @@ import { CATEGORY_OPTIONS } from '../types';
 import type { Category } from '../types';
 import CnoteLoader from '../components/ui/CnoteLoader';
 import DesktopSidebar from '../components/layout/DesktopSidebar';
+import CategorySelectModal from '../components/ui/CategorySelectModal';
 import './FeedPage.css';
 
 
@@ -19,6 +20,7 @@ export default function FeedPage() {
   const [activeCategory, setActiveCategory] = useState<Category | null>(null);
   const [search, setSearch] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null);
+  const [showNewModal, setShowNewModal] = useState(false);
 
   const { data: notes, isLoading } = useNotes(activeCategory || undefined);
   const createNote = useCreateNote();
@@ -98,6 +100,11 @@ export default function FeedPage() {
       setShowDeleteModal(null);
       deleteNote.mutate(id);
     }
+  };
+  
+  const handleCreateNote = (category: Category) => {
+    setShowNewModal(false);
+    createNote.mutate(category);
   };
 
   if (createNote.isPending) {
@@ -184,7 +191,7 @@ export default function FeedPage() {
       <button 
         ref={fabRef}
         className="feed-fab" 
-        onClick={() => createNote.mutate('general')}
+        onClick={() => setShowNewModal(true)}
         title="New Note"
         aria-label="New Note"
       >
@@ -222,6 +229,12 @@ export default function FeedPage() {
           <Button variant="danger" size="md" onClick={handleDelete} loading={deleteNote.isPending}>Delete</Button>
         </div>
       </Modal>
+      
+      <CategorySelectModal
+        isOpen={showNewModal}
+        onSelect={handleCreateNote}
+        onClose={() => setShowNewModal(false)}
+      />
     </div>
   );
 }

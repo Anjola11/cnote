@@ -33,8 +33,8 @@ export default function ImageUploadModal({ isOpen, onClose, onInsert, noteId }: 
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image size must be less than 5MB.');
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Image size must be less than 10MB.');
       return;
     }
 
@@ -106,7 +106,7 @@ export default function ImageUploadModal({ isOpen, onClose, onInsert, noteId }: 
               <>
                 <i className="fa-solid fa-cloud-arrow-up" />
                 <p className="image-upload-modal__drop-text">Drag and drop an image, or click to browse</p>
-                <p className="image-upload-modal__hint">Supports JPG, PNG, WebP (Max 5MB)</p>
+                <p className="image-upload-modal__hint">Supports JPG, PNG, WebP, GIF, AVIF (Max 10MB)</p>
               </>
             </div>
           ) : (
