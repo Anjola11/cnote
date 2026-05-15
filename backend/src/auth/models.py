@@ -13,6 +13,7 @@ import cloudinary
 
 if TYPE_CHECKING:
     from src.notes.models import Note
+    from src.preferences.models import UserPreference
 
 class Plan(str, Enum):
     BASIC = "basic"
@@ -77,11 +78,12 @@ class User(SQLModel, table=True):
         return url
 
 
-    #relationship
     notes: list["Note"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "all, delete-orphan", "primaryjoin": "User.uid == Note.uid"}
     )
+
+    preferences: list["UserPreference"] = Relationship(back_populates="user")
 
 
 def get_expiry_time(minutes):

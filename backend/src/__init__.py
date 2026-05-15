@@ -12,6 +12,7 @@ from src.auth.routes import auth_router
 from src.fileUpload.routes import file_router
 from src.limiter import limiter
 from src.notes.routes import notes_router, public_notes_router
+from src.preferences.routes import preferences_router
 from slowapi.errors import RateLimitExceeded
 from email.utils import parsedate_to_datetime
 from datetime import datetime, timezone
@@ -132,3 +133,4 @@ app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(notes_router, prefix="/api/v1/notes", tags=["notes"])
 app.include_router(file_router, prefix="/api/v1/upload", tags=["upload"])
 app.include_router(public_notes_router, prefix="/api/v1/public", tags=["public"])
+app.include_router(preferences_router, prefix="/api/v1/preferences", tags=["preferences"])

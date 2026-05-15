@@ -1,5 +1,7 @@
 from sqlmodel import select, desc
+from sqlalchemy.orm import selectinload
 from src.auth.models import User, SignupOtp, ForgotPasswordOtp
+from src.preferences.models import UserPreference
 from src.auth.schemas import (
     UserCreateInput, VerifyOtpInput, UserLoginInput, ForgotPasswordInput, 
     ResetPasswordInput, RenewAccessTokenInput, ResendOtpInput, LogoutInput, OtpTypes,
@@ -45,6 +47,18 @@ class AuthServices:
             "bio": user.bio,
             "avatar_public_id": user.avatar_public_id,
             "avatar_url": user.profile_picture_url,
+        }
+
+    def _get_user_token_data(self, user: User) -> dict:
+        """Prepares user data for JWT token generation."""
+        # Map preferences list to a dict for the token
+        preferences_dict = {p.key: p.value for p in (user.preferences or [])}
+        
+        return {
+            "uid": str(user.uid),
+            "session_version": user.session_version,
+            "plan": user.plan,
+            "preferences": preferences_dict
         }
 
     def _origin_host(self, request: Request | None) -> str | None:
@@ -135,9 +149,10 @@ class AuthServices:
             path=settings["path"],
         )
 
-    async def get_user(self, email:str, session:AsyncSession, return_data: bool):
-        
+    async def get_user(self, email: str, session: AsyncSession, return_data: bool, load_preferences: bool = False):
         statement = select(User).where(User.email == email.lower())
+        if load_preferences:
+            statement = statement.options(selectinload(User.preferences))
         result = await session.exec(statement)
         user = result.first()
         
@@ -180,11 +195,7 @@ class AuthServices:
             await session.refresh(new_user)
 
             # Generate tokens for cookie-based auth
-            user_payload = {
-                "uid": str(new_user.uid),
-                "session_version": new_user.session_version,
-                
-            }
+            user_payload = self._get_user_token_data(new_user)
             access_token = create_token(user_payload, token_type=TokenType.ACCESS)
             refresh_token = create_token(user_payload, token_type=TokenType.REFRESH)
             
@@ -289,9 +300,9 @@ class AuthServices:
                 )
 
                 if response is not None:
-                    user_dict = user.model_dump()
-                    access_token = create_token(user_dict, token_type=TokenType.ACCESS)
-                    refresh_token = create_token(user_dict, token_type=TokenType.REFRESH)
+                    user_payload = self._get_user_token_data(user)
+                    access_token = create_token(user_payload, token_type=TokenType.ACCESS)
+                    refresh_token = create_token(user_payload, token_type=TokenType.REFRESH)
                     self._set_auth_cookies(
                         response=response,
                         access_token=access_token,
@@ -424,7 +435,7 @@ class AuthServices:
         response: Response,
         request: Request | None = None,
     ):
-        user = await self.get_user(loginInput.email, session, True)
+        user = await self.get_user(loginInput.email, session, True, load_preferences=True)
         
         INVALID_CREDENTIALS = HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -461,13 +472,9 @@ class AuthServices:
                 detail="Internal server error"
             )
 
-        user_dict = user.model_dump()
-        token_payload = {
-            "uid": str(user.uid),
-            "session_version": user.session_version,
-        }
-        access_token = create_token(token_payload, token_type=TokenType.ACCESS)
-        refresh_token = create_token(token_payload, token_type=TokenType.REFRESH)
+        user_payload = self._get_user_token_data(user)
+        access_token = create_token(user_payload, token_type=TokenType.ACCESS)
+        refresh_token = create_token(user_payload, token_type=TokenType.REFRESH)
         self._set_auth_cookies(
             response=response,
             access_token=access_token,
@@ -570,7 +577,7 @@ class AuthServices:
             )
 
         uid = old_refresh_token_decode.get("sub") 
-        statement = select(User).where(User.uid == uuid.UUID(uid))
+        statement = select(User).where(User.uid == uuid.UUID(uid)).options(selectinload(User.preferences))
         result = await session.exec(statement)
         user = result.first()
 
@@ -586,14 +593,10 @@ class AuthServices:
                 detail="Refresh token expired. Login required."
             )
 
-        user_data = {
-            "uid": user.uid,
-            "session_version": user.session_version,
-        }
-
-        new_token = create_token(user_data, token_type=TokenType.ACCESS)
+        user_payload = self._get_user_token_data(user)
+        new_token = create_token(user_payload, token_type=TokenType.ACCESS)
         await self.add_token_to_blocklist(old_refresh_token_str)
-        new_refresh_token = create_token(user_data, token_type=TokenType.REFRESH)
+        new_refresh_token = create_token(user_payload, token_type=TokenType.REFRESH)
         
         self._set_auth_cookies(
             response=response,

@@ -49,7 +49,8 @@ def create_token(user_data: dict, token_type: TokenType):
         'type': token_type.value,
         'sub': str(user_data.get('uid')),
         'session_version': int(user_data.get('session_version', 0)),
-        
+        'plan': user_data.get('plan'),
+        'preferences': user_data.get('preferences', {}),
     }
 
     # Compute absolute expiration time once to keep iat/exp consistent.
