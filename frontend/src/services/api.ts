@@ -191,11 +191,18 @@ export const authApi = {
     api.patch('/auth/me', data).then(r => r.data),
 };
 
-export const mediaApi = {
-  upload: (file: File) => {
+export const fileApi = {
+  uploadAvatar: (file: File) => {
     const form = new FormData();
     form.append('file', file);
-    return api.post('/media/upload', form, {
+    return api.post('/upload/avatar', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then(r => r.data);
+  },
+  uploadNoteImage: (noteId: string, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return api.post(`/upload/note-image/${noteId}`, form, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }).then(r => r.data);
   },

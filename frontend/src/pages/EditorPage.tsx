@@ -180,6 +180,7 @@ export default function EditorPage() {
           <Toolbar
             editor={editorInstance}
             category={note.category as Category}
+            noteId={id!}
             onScriptureClick={() => setShowScriptureModal(true)}
           />
         )}
