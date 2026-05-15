@@ -8,7 +8,7 @@ import './ImageComponent.css';
 // Global map to hold files during optimistic upload
 export const pendingImageFiles = new Map<string, File>();
 
-export default function ImageComponent({ node, updateAttributes, editor }: NodeViewProps) {
+export default function ImageComponent({ node, updateAttributes, editor, deleteNode }: NodeViewProps) {
   const { src, width, height, status, alt } = node.attrs;
   const [isResizing, setIsResizing] = useState(false);
   const [currentWidth, setCurrentWidth] = useState(width);
@@ -127,6 +127,17 @@ export default function ImageComponent({ node, updateAttributes, editor }: NodeV
             <i className="fa-solid fa-rotate-right" />
             <span>Retry Upload</span>
           </div>
+        )}
+
+        {/* Delete Button */}
+        {editor.isEditable && (
+          <button 
+            className="image-node-view__delete-btn" 
+            onClick={() => deleteNode()}
+            title="Delete Image"
+          >
+            <i className="fa-solid fa-trash-can" />
+          </button>
         )}
 
         {/* Resize Handle */}
