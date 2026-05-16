@@ -1,5 +1,7 @@
 from sqlmodel import select, desc
+from sqlalchemy import inspect
 from sqlalchemy.orm import selectinload
+from sqlalchemy.orm.attributes import NO_VALUE
 from src.auth.models import User, SignupOtp, ForgotPasswordOtp
 from src.preferences.models import UserPreference
 from src.auth.schemas import (
@@ -38,6 +40,12 @@ cookie_settings = {
 }
 
 class AuthServices:
+    def _preferences_dict(self, user: User) -> dict[str, str]:
+        loaded_preferences = inspect(user).attrs.preferences.loaded_value
+        if loaded_preferences is NO_VALUE or loaded_preferences is None:
+            return {}
+        return {p.key: p.value for p in loaded_preferences}
+
     def _serialize_user(self, user: User) -> dict:
         return {
             "uid": str(user.uid),
@@ -47,13 +55,13 @@ class AuthServices:
             "bio": user.bio,
             "avatar_public_id": user.avatar_public_id,
             "avatar_url": user.profile_picture_url,
-            "preferences": {p.key: p.value for p in (user.preferences or [])}
+            "preferences": self._preferences_dict(user),
         }
 
     def _get_user_token_data(self, user: User) -> dict:
         """Prepares user data for JWT token generation."""
         # Map preferences list to a dict for the token
-        preferences_dict = {p.key: p.value for p in (user.preferences or [])}
+        preferences_dict = self._preferences_dict(user)
         
         return {
             "uid": str(user.uid),
@@ -192,20 +200,21 @@ class AuthServices:
 
         try:
             session.add(new_user)
+            await session.flush()
+
+            signup_otp = email_services.build_otp_record(new_user.uid, OtpTypes.SIGNUP)
+            session.add(signup_otp)
             await session.commit()
-            await session.refresh(new_user)
 
             # Generate tokens for cookie-based auth
             user_payload = self._get_user_token_data(new_user)
             access_token = create_token(user_payload, token_type=TokenType.ACCESS)
             refresh_token = create_token(user_payload, token_type=TokenType.REFRESH)
-            
-            otp_record = await email_services.save_otp(new_user.uid, session, type=OtpTypes.SIGNUP)
-            
+
             background_tasks.add_task(
                 email_services.send_email_verification_otp, 
                 userInput.email, 
-                otp_record.otp
+                signup_otp.otp
             )
 
             self._set_auth_cookies(

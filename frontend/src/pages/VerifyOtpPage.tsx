@@ -26,6 +26,32 @@ export default function VerifyOtpPage() {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const formRef = useRef<HTMLDivElement>(null);
 
+  const focusOtpIndex = useCallback((index: number) => {
+    inputRefs.current[Math.min(Math.max(index, 0), OTP_LENGTH - 1)]?.focus();
+  }, []);
+
+  const applyOtpDigits = useCallback((digits: string, startIndex = 0) => {
+    const sanitized = digits.replace(/\D/g, '');
+    if (!sanitized) {
+      return false;
+    }
+
+    const normalized = [...otp];
+    let cursor = Math.min(Math.max(startIndex, 0), OTP_LENGTH - 1);
+
+    for (const char of sanitized) {
+      if (cursor >= OTP_LENGTH) break;
+      normalized[cursor] = char;
+      cursor += 1;
+    }
+
+    setOtp(normalized);
+
+    const nextEmpty = normalized.findIndex(value => !value);
+    focusOtpIndex(nextEmpty === -1 ? OTP_LENGTH - 1 : nextEmpty);
+    return true;
+  }, [focusOtpIndex, otp]);
+
   // If user is already verified, go to feed
   useEffect(() => {
     if (user?.is_verified) {
@@ -65,38 +91,49 @@ export default function VerifyOtpPage() {
   }, []);
 
   const handleChange = (index: number, value: string) => {
-    if (!/^\d*$/.test(value)) return; // digits only
+    const digitsOnly = value.replace(/\D/g, '');
+    if (!digitsOnly) {
+      const newOtp = [...otp];
+      newOtp[index] = '';
+      setOtp(newOtp);
+      return;
+    }
+
+    if (digitsOnly.length > 1) {
+      applyOtpDigits(digitsOnly, index);
+      return;
+    }
 
     const newOtp = [...otp];
-    newOtp[index] = value.slice(-1); // take last char
+    newOtp[index] = digitsOnly;
     setOtp(newOtp);
 
-    // Auto-advance to next input
-    if (value && index < OTP_LENGTH - 1) {
-      inputRefs.current[index + 1]?.focus();
+    if (index < OTP_LENGTH - 1) {
+      focusOtpIndex(index + 1);
     }
   };
 
   const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
     if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
+      focusOtpIndex(index - 1);
+    }
+    if (e.key === 'ArrowLeft' && index > 0) {
+      e.preventDefault();
+      focusOtpIndex(index - 1);
+    }
+    if (e.key === 'ArrowRight' && index < OTP_LENGTH - 1) {
+      e.preventDefault();
+      focusOtpIndex(index + 1);
     }
   };
 
-  const handlePaste = (e: React.ClipboardEvent) => {
+  const handlePaste = (e: React.ClipboardEvent, index: number) => {
     e.preventDefault();
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, OTP_LENGTH);
-    if (!pasted) return;
-
-    const newOtp = [...otp];
-    for (let i = 0; i < pasted.length; i++) {
-      newOtp[i] = pasted[i];
+    const pasted = e.clipboardData.getData('text');
+    const applied = applyOtpDigits(pasted, index);
+    if (!applied) {
+      toast.error('Paste a valid 6-digit verification code.');
     }
-    setOtp(newOtp);
-
-    // Focus the next empty input or the last one
-    const nextEmpty = newOtp.findIndex(v => !v);
-    inputRefs.current[nextEmpty === -1 ? OTP_LENGTH - 1 : nextEmpty]?.focus();
   };
 
   const handleVerify = useCallback(async () => {
@@ -161,7 +198,7 @@ export default function VerifyOtpPage() {
           We sent a 6-digit code to <strong>{verifyEmail}</strong>. Enter it below to activate your account.
         </p>
 
-        <div className="verify-page__otp-inputs" style={{ opacity: 0 }} onPaste={handlePaste}>
+        <div className="verify-page__otp-inputs" style={{ opacity: 0 }}>
           {otp.map((digit, i) => (
             <input
               key={i}
@@ -173,7 +210,11 @@ export default function VerifyOtpPage() {
               value={digit}
               onChange={e => handleChange(i, e.target.value)}
               onKeyDown={e => handleKeyDown(i, e)}
+              onPaste={e => handlePaste(e, i)}
+              onFocus={e => e.currentTarget.select()}
               autoComplete="one-time-code"
+              aria-label={`OTP digit ${i + 1}`}
+              pattern="[0-9]*"
             />
           ))}
         </div>

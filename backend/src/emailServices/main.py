@@ -16,6 +16,7 @@ from brevo.transactional_emails import (
 from src.config import Config
 from src.auth.models import SignupOtp, ForgotPasswordOtp  
 from src.auth.schemas import OtpTypes
+from src.utils.logger import logger
 from src.utils.otp import generate_otp
 
 # Setup template directory paths
@@ -35,21 +36,24 @@ class EmailServices:
         self.BREVO_EMAIL = Config.BREVO_EMAIL
         self.BREVO_SENDER_NAME = Config.BREVO_SENDER_NAME
 
-        # Initialize the modern Brevo Client
-        self.client = Brevo(api_key=self.BREVO_API_KEY) if self.BREVO_API_KEY else None
+    def _create_client(self):
+        return Brevo(api_key=self.BREVO_API_KEY) if self.BREVO_API_KEY else None
 
-    async def save_otp(self, user_id: uuid.UUID, session: AsyncSession, type: OtpTypes):
+    def build_otp_record(self, user_id: uuid.UUID, type: OtpTypes):
         if type == OtpTypes.SIGNUP:
             model = SignupOtp
         elif type == OtpTypes.FORGOTPASSWORD:
             model = ForgotPasswordOtp
         else:
             raise ValueError("Invalid OTP Type")
-            
-        new_otp = model(
+
+        return model(
             otp=generate_otp(),
-            uid=user_id 
+            uid=user_id
         )
+
+    async def save_otp(self, user_id: uuid.UUID, session: AsyncSession, type: OtpTypes):
+        new_otp = self.build_otp_record(user_id, type)
 
         try:
             session.add(new_otp)
@@ -68,12 +72,15 @@ class EmailServices:
             template = template_env.get_template(f"{template_name}.html")
             return template.render(**payload)
         except Exception as err:
-            print(f"Error rendering template '{template_name}': {err}")
+            logger.error(f"Error rendering template '{template_name}': {err}")
             raise err
     
     def send_email(self, to_email: str, subject: str, html_content: str, text_content: str) -> bool:
-        if not self.client:
-            print(f"Brevo API key not configured. Mock sending email to: {to_email} | Subject: {subject} | Content: {text_content}")
+        client = self._create_client()
+        if not client:
+            logger.info(
+                f"Brevo API key not configured. Mock sending email to: {to_email} | Subject: {subject} | Content: {text_content}"
+            )
             return True
 
         try:
@@ -92,7 +99,7 @@ class EmailServices:
                     )
 
             # Use the namespaced service for transactional emails
-            self.client.transactional_emails.send_transac_email(
+            client.transactional_emails.send_transac_email(
                 subject=subject,
                 html_content=html_content,
                 text_content=text_content,
@@ -108,33 +115,48 @@ class EmailServices:
                 # Pass the list to the 'attachment' parameter
                 attachment=attachments if attachments else None
             )
-            print(f"Email sent to {to_email}: {subject}")
+            logger.info(f"Email sent to {to_email}: {subject}")
             return True
         except ApiError as e:
-            print(f"Error sending email: Status {e.status_code}, Body: {e.body}")
+            logger.error(f"Error sending email: Status {e.status_code}, Body: {e.body}")
+            return False
+        except Exception as e:
+            logger.error(f"Unexpected error sending email to {to_email} with subject '{subject}': {e}")
             return False
     
     def send_email_verification_otp(self, user_email: str, otp_code: str):
-        html = self.render_template('email-otp-verification', {
-            'username': user_email,
-            'otpCode': otp_code,
-            'expiryTime': '10 minutes'
-        })
-        text_content = f"Hello {user_email}, Your verification code is: {otp_code}"
-        return self.send_email(user_email, 'Verify your email', html, text_content)
+        try:
+            html = self.render_template('email-otp-verification', {
+                'username': user_email,
+                'otpCode': otp_code,
+                'expiryTime': '10 minutes'
+            })
+            text_content = f"Hello {user_email}, Your verification code is: {otp_code}"
+            return self.send_email(user_email, 'Verify your email', html, text_content)
+        except Exception as e:
+            logger.error(f"Failed to prepare verification OTP email for {user_email}: {e}")
+            return False
 
     def send_welcome_email(self, user_email: str):
-        html = self.render_template('welcome', {
-            'email': user_email
-        })
-        text_content = f"Welcome to cnote! Your email {user_email} has been verified and your account is ready."
-        return self.send_email(user_email, 'Welcome to cnote', html, text_content)
+        try:
+            html = self.render_template('welcome', {
+                'email': user_email
+            })
+            text_content = f"Welcome to cnote! Your email {user_email} has been verified and your account is ready."
+            return self.send_email(user_email, 'Welcome to cnote', html, text_content)
+        except Exception as e:
+            logger.error(f"Failed to prepare welcome email for {user_email}: {e}")
+            return False
     
     def send_forgot_password_otp(self, user_email: str, otp_code: str):
-        html = self.render_template('forgot-password-otp', {
-            'username': user_email,
-            'otpCode': otp_code,
-            'expiryTime': '5 minutes'
-        })
-        text_content = f"Hello {user_email}, Your Password Reset Code is: {otp_code}"
-        return self.send_email(user_email, 'Reset your password', html, text_content)
+        try:
+            html = self.render_template('forgot-password-otp', {
+                'username': user_email,
+                'otpCode': otp_code,
+                'expiryTime': '5 minutes'
+            })
+            text_content = f"Hello {user_email}, Your Password Reset Code is: {otp_code}"
+            return self.send_email(user_email, 'Reset your password', html, text_content)
+        except Exception as e:
+            logger.error(f"Failed to prepare forgot-password OTP email for {user_email}: {e}")
+            return False

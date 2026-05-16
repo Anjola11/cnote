@@ -1,13 +1,13 @@
 # Cnote — Where thoughts find their home.
 
-[![Vercel](https://img.shields.io/badge/Frontend-Vercel-black?style=flat-square&logo=vercel)](https://usecnote.vercel.app)
+[![Frontend](https://img.shields.io/badge/Frontend-Live%20Site-111111?style=flat-square)](https://www.usecnote.xyz)
 [![Heroku](https://img.shields.io/badge/Backend-Heroku-430098?style=flat-square&logo=heroku)](https://cnote-8f598c8d0d2d.herokuapp.com)
 [![TypeScript](https://img.shields.io/badge/Language-TypeScript-3178C6?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 [![FastAPI](https://img.shields.io/badge/Framework-FastAPI-009688?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com/)
 
 **Cnote** is a premium, distraction-free writing platform designed for creative thinkers, developers, and spiritual seekers. It combines the power of a rich-text editor with a minimalist, high-aesthetic interface to provide a sanctuary for your digital notes.
 
-![Landing Page Mockup](https://usecnote.vercel.app/og-image.png)
+![Landing Page Mockup](https://www.usecnote.xyz/og-image.png)
 
 ## ✨ Key Features
 

@@ -6,4 +6,4 @@ Disallow: /bin
 Disallow: /profile
 Disallow: /public/note/
 
-Sitemap: https://cnote.vercel.app/sitemap.xml
+Sitemap: https://www.usecnote.xyz/sitemap.xml

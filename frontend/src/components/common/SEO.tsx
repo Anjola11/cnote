@@ -12,8 +12,8 @@ interface SEOProps {
 const SEO = ({
   title = 'Cnote - The Minimalist Note App',
   description = 'A clean, Notion-style rich-text editor for your thoughts, code snippets, and scriptures.',
-  image = 'https://cnote.vercel.app/og-image.png', // Default OG image
-  url = 'https://cnote.vercel.app',
+  image = 'https://www.usecnote.xyz/og-image.png', // Default OG image
+  url = 'https://www.usecnote.xyz',
   type = 'website',
   noindex = false,
 }: SEOProps) => {
