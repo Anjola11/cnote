@@ -1,6 +1,7 @@
 import { useRef, useEffect, useCallback } from 'react';
 import type { SaveStatus } from '../types';
 import { usePatchNote } from './useNotes';
+import { set } from 'idb-keyval';
 
 const getHash = (obj: any) => JSON.stringify(obj);
 
@@ -81,12 +82,17 @@ export function useAutoSave(
 
     isSaving.current = true;
     setSaveStatus(failureCount.current > 0 ? 'degraded' : 'saving');
-    queuedContent.current = null;
 
     try {
       await mutateAsync({ id: noteId, data: { content: contentToSave } as any });
       lastSavedHash.current = contentHash;
       failureCount.current = 0;
+      // Note: we don't clear queuedContent.current here until *after* the save succeeds,
+      // in case the user typed while we were waiting (the effect updates the ref).
+      // If the hash still matches, they didn't type anything new.
+      if (getHash(queuedContent.current) === contentHash) {
+        queuedContent.current = null;
+      }
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 2000);
     } catch {
@@ -120,6 +126,7 @@ export function useAutoSave(
     processQueueRef.current = processQueue;
   }, [processQueue]);
 
+  // Main local-save and HTTP debounce effect
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
@@ -131,11 +138,15 @@ export function useAutoSave(
     // Fast deduplication check before queuing
     if (getHash(content) === lastSavedHash.current) return;
 
-    if (failureCount.current < 3) {
-      setSaveStatus('unsaved');
-    }
-
     queuedContent.current = content;
+
+    // 1. Instant local write-ahead buffer
+    set(`note-${noteId}`, content).then(() => {
+      // Show saved-locally if we haven't already hit failure states or aren't actively spinning
+      if (failureCount.current < 3 && !isSaving.current) {
+        setSaveStatus('saved-locally');
+      }
+    }).catch(err => console.error('IndexedDB save failed:', err));
 
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     
@@ -160,7 +171,40 @@ export function useAutoSave(
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
     };
-  }, [content, enabled, setSaveStatus]);
+  }, [content, enabled, setSaveStatus, noteId]);
+
+  // Handle navigation away and tab closures
+  useEffect(() => {
+    const handleExit = (e?: BeforeUnloadEvent) => {
+      if (!queuedContent.current) return;
+
+      const blob = new Blob([JSON.stringify({ content: queuedContent.current })], { 
+        type: 'application/json' 
+      });
+      
+      const success = navigator.sendBeacon(`/api/v1/notes/${noteId}/beacon`, blob);
+      
+      if (success) {
+        queuedContent.current = null; // Mark as handled
+      } else if (e) {
+        // Only block navigation if Beacon failed
+        e.preventDefault();
+        e.returnValue = ''; 
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) handleExit();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleExit);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleExit);
+    };
+  }, [noteId]);
 
   // Cleanup on unmount
   useEffect(() => {

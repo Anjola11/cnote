@@ -11,8 +11,9 @@ interface SaveStatusProps {
 const STATUS_CONFIG = {
   idle: { icon: '', label: '', className: '' },
   unsaved: { icon: '', label: 'Unsaved', className: 'save-status--unsaved' },
+  'saved-locally': { icon: '', label: 'Saved locally', className: 'save-status--saved-locally' },
   saving: { icon: 'fa-solid fa-spinner fa-spin', label: 'Saving…', className: 'save-status--saving' },
-  saved: { icon: 'fa-solid fa-check-circle', label: 'Saved', className: 'save-status--saved' },
+  saved: { icon: 'fa-solid fa-check-circle', label: 'Synced', className: 'save-status--saved' },
   degraded: { icon: '', label: 'Saving…', className: 'save-status--degraded' },
   'circuit-open': { icon: 'fa-solid fa-triangle-exclamation', label: 'Save failed', className: 'save-status--error' },
   error: { icon: 'fa-solid fa-triangle-exclamation', label: 'Save failed', className: 'save-status--error' },
@@ -33,7 +34,7 @@ export default function SaveStatusIndicator({ status }: SaveStatusProps) {
 
   return (
     <div ref={ref} className={clsx('save-status', config.className)}>
-      {(status === 'unsaved' || status === 'degraded') && <span className="save-status__dot pulse-dot" />}
+      {(status === 'unsaved' || status === 'degraded' || status === 'saved-locally') && <span className="save-status__dot pulse-dot" />}
       {config.icon && <i className={config.icon} />}
       <span>{config.label}</span>
     </div>

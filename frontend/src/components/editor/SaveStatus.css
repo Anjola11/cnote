@@ -17,6 +17,9 @@
 .save-status--saving {
   color: var(--accent);
 }
+.save-status--saved-locally {
+  color: var(--text-muted);
+}
 .save-status--saved {
   color: var(--success);
 }

@@ -143,6 +143,28 @@ async def update_note_content(
     return success_response(message="Note content updated", data=note)
 
 
+@notes_router.post("/{note_id}/beacon", status_code=status.HTTP_200_OK)
+@limiter.limit("60/minute", key_func=get_user_id_or_ip)
+async def update_note_content_beacon(
+    request: Request,
+    note_id: UUID,
+    body: NoteContentUpdateBody,
+    user_id=Depends(get_verified_user_id),
+    session: AsyncSession = Depends(get_session),
+    note_services: NoteServices = Depends(get_note_services),
+):
+    """
+    Fire-and-forget endpoint for navigator.sendBeacon() saves on tab close.
+    """
+    await note_services.update_note_content(
+        note_id=note_id,
+        user_id=user_id,
+        content=body.content,
+        session=session
+    )
+    return {"detail": "Beacon received"}
+
+
 @notes_router.delete("/{note_id}", response_model=NoteDeleteResponse, status_code=status.HTTP_200_OK)
 @limiter.limit("120/minute", key_func=get_user_id_or_ip)
 async def delete_note(

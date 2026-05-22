@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { get } from 'idb-keyval';
 import { formatDistanceToNow } from 'date-fns';
 import Navbar from '../components/layout/Navbar';
 import Badge from '../components/ui/Badge';
@@ -31,6 +32,7 @@ export default function EditorPage() {
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState<object | null>(null);
+  const [initialContent, setInitialContent] = useState<object | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
@@ -56,13 +58,26 @@ export default function EditorPage() {
     if (note && !titleInitialized.current) {
       setTitle(note.title || '');
       titleInitialized.current = true;
+      
+      // Check IDB for unsaved local content
+      get(`note-${id}`).then((localContent) => {
+        if (localContent && JSON.stringify(localContent) !== JSON.stringify(note.content)) {
+          setInitialContent(localContent as object);
+          setContent(localContent as object); // Trigger auto-save to sync local changes
+        } else {
+          setInitialContent(note.content);
+        }
+      }).catch(() => {
+        setInitialContent(note.content);
+      });
     }
-    
-    // If we're done loading, ensure the global loader is off
-    if (!isLoading && note) {
+  }, [note, id]);
+
+  useEffect(() => {
+    if (!isLoading && note && initialContent) {
       setIsLoading(false);
     }
-  }, [note, isLoading, setIsLoading]);
+  }, [isLoading, note, initialContent, setIsLoading]);
 
   useAutoSave(id!, content, setSaveStatus, isEditing);
 
@@ -145,7 +160,7 @@ export default function EditorPage() {
     }
   };
 
-  if (isLoading || !note) {
+  if (isLoading || !note || !initialContent) {
     return <CnoteLoader message="Loading note..." />;
   }
 
@@ -224,7 +239,7 @@ export default function EditorPage() {
         )}
 
         <RichEditor
-          content={note.content}
+          content={initialContent}
           onUpdate={setContent}
           onEditorReady={handleEditorReady}
           editable={isEditing && isEffectivelyOnline}
