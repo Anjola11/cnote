@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { publicApi } from '../services/api';
@@ -18,6 +19,8 @@ import { Scripture } from '../components/editor/ScriptureExtension';
 import PublicNavbar from '../components/layout/PublicNavbar';
 import Logo from '../components/ui/Logo';
 import SEO from '../components/common/SEO';
+import { useThemeContext } from '../context/ThemeContext';
+import { adaptEditorColors } from '../utils/colorAdaptation';
 import './PublicNotePage.css';
 
 const lowlight = createLowlight(common);
@@ -52,6 +55,19 @@ export default function PublicNotePage() {
     content: note?.content,
     editable: false, // strictly read-only
   }, [note?.content]);
+
+  // Issue 5: Adapt inline-colored text for dark mode in public view
+  const { isDark } = useThemeContext();
+  
+  // Apply color adaptation initially and whenever theme changes
+  // We use useEffect to run this after the editor has rendered its content
+  useEffect(() => {
+    if (editor && !editor.isDestroyed) {
+      // In read-only mode, the content doesn't change after initial load,
+      // so a single pass on theme change is sufficient.
+      adaptEditorColors(editor.view.dom, isDark);
+    }
+  }, [isDark, editor, note?.content]);
 
 
   if (isLoading) {

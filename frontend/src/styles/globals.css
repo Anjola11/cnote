@@ -103,6 +103,7 @@ img {
   font-family: var(--font-heading);
   font-size: 28px;
   margin: 28px 0 12px;
+  scroll-margin-top: 80px;
 }
 @media (max-width: 768px) {
   .ProseMirror h1 { font-size: 24px; }
@@ -113,11 +114,13 @@ img {
   font-family: var(--font-heading);
   font-size: 22px;
   margin: 24px 0 10px;
+  scroll-margin-top: 80px;
 }
 .ProseMirror h3 {
   font-family: var(--font-heading);
   font-size: 18px;
   margin: 20px 0 8px;
+  scroll-margin-top: 80px;
 }
 .ProseMirror strong {
   font-weight: 600;
@@ -184,6 +187,10 @@ img {
 .ProseMirror a:hover {
   color: var(--accent-hover);
   text-decoration-thickness: 2px;
+}
+/* Internal anchor links — dotted underline to distinguish from external */
+.ProseMirror a[href^="#"] {
+  text-decoration-style: dotted;
 }
 
 /* Scripture block */

@@ -8,7 +8,29 @@ import ScriptureBlock from './ScriptureBlock';
 interface ToolbarProps {
   editor: Editor | null;
   noteId: string;
+  disabled?: boolean;
   onScriptureClick?: () => void;
+}
+
+/** Extract all headings from the editor document for the anchor popover. */
+function getEditorHeadings(editor: Editor): { level: number; text: string; id: string }[] {
+  const headings: { level: number; text: string; id: string }[] = [];
+  editor.state.doc.descendants((node) => {
+    if (node.type.name === 'heading') {
+      const text = node.textContent;
+      const id = text
+        .toLowerCase()
+        .trim()
+        .replace(/[^\w\s-]/g, '')
+        .replace(/[\s_]+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+      if (id) {
+        headings.push({ level: node.attrs.level, text, id });
+      }
+    }
+  });
+  return headings;
 }
 
 const PRESET_COLORS = [
@@ -118,17 +140,19 @@ function ToolbarPopover({ children, anchorRef, onClose }: { children: React.Reac
 
 /* ── main component ── */
 
-export default function Toolbar({ editor, noteId }: ToolbarProps) {
+export default function Toolbar({ editor, noteId, disabled = false }: ToolbarProps) {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [showLangPicker, setShowLangPicker] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
+  const [showAnchorPicker, setShowAnchorPicker] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
 
   const linkBtnRef = useRef<HTMLButtonElement>(null);
   const colorBtnRef = useRef<HTMLButtonElement>(null);
   const langBtnRef = useRef<HTMLButtonElement>(null);
   const scriptureBtnRef = useRef<HTMLButtonElement>(null);
+  const anchorBtnRef = useRef<HTMLButtonElement>(null);
 
   const [showScripturePopover, setShowScripturePopover] = useState(false);
 
@@ -138,12 +162,27 @@ export default function Toolbar({ editor, noteId }: ToolbarProps) {
       editor.chain().focus().extendMarkRange('link').unsetLink().run();
     } else {
       let url = linkUrl.trim();
-      if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
-      editor.chain().focus().extendMarkRange('link').setLink({ href: url, target: '_blank' }).run();
+      // Don't prepend https:// for anchor (#) links
+      if (!url.startsWith('#') && !/^https?:\/\//i.test(url)) url = 'https://' + url;
+      const isAnchor = url.startsWith('#');
+      editor.chain().focus().extendMarkRange('link').setLink({
+        href: url,
+        target: isAnchor ? null : '_blank',
+      }).run();
     }
     setShowLinkInput(false);
     setLinkUrl('');
   }, [editor, linkUrl]);
+
+  /** Insert an anchor link to a heading on the current selection. */
+  const applyAnchorLink = useCallback((headingId: string) => {
+    if (!editor) return;
+    editor.chain().focus().extendMarkRange('link').setLink({
+      href: `#${headingId}`,
+      target: null,
+    }).run();
+    setShowAnchorPicker(false);
+  }, [editor]);
 
   // Visual Viewport logic for mobile
   useEffect(() => {
@@ -182,7 +221,7 @@ export default function Toolbar({ editor, noteId }: ToolbarProps) {
   if (!editor) return null;
 
   return (
-    <div className="toolbar">
+    <div className={`toolbar ${disabled ? 'toolbar--disabled' : ''}`}>
       {/* Headings */}
       <ToolBtn active={editor.isActive('heading', { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} title="Heading 1">
         <span className="toolbar__text-btn">H1</span>
@@ -273,6 +312,42 @@ export default function Toolbar({ editor, noteId }: ToolbarProps) {
                   title="Custom color"
                 />
               </div>
+            </div>
+          </ToolbarPopover>
+        )}
+      </div>
+
+      {/* Anchor / Jump-to link */}
+      <div className="toolbar__anchor-wrapper">
+        <ToolBtn
+          ref={anchorBtnRef}
+          active={showAnchorPicker}
+          onClick={() => setShowAnchorPicker(!showAnchorPicker)}
+          title="Jump to Section"
+        >
+          <i className="fa-solid fa-hashtag" />
+        </ToolBtn>
+        {showAnchorPicker && (
+          <ToolbarPopover anchorRef={anchorBtnRef} onClose={() => setShowAnchorPicker(false)}>
+            <div className="toolbar__anchor-popover">
+              {(() => {
+                const headings = editor ? getEditorHeadings(editor) : [];
+                if (headings.length === 0) {
+                  return <div className="toolbar__anchor-empty">No headings found.<br />Add H1, H2, or H3 headings first.</div>;
+                }
+                return headings.map((h, i) => (
+                  <button
+                    key={`${h.id}-${i}`}
+                    className={`toolbar__anchor-option toolbar__anchor-option--h${h.level}`}
+                    onClick={() => applyAnchorLink(h.id)}
+                    type="button"
+                    title={`Link to: ${h.text}`}
+                  >
+                    <span className="toolbar__anchor-level">H{h.level}</span>
+                    <span className="toolbar__anchor-text">{h.text}</span>
+                  </button>
+                ));
+              })()}
             </div>
           </ToolbarPopover>
         )}

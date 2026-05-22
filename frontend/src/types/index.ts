@@ -5,7 +5,7 @@ export const CATEGORY_OPTIONS: { value: Category; icon: string; title: string; s
   { value: 'programming', icon: 'fa-solid fa-code', title: 'Programming', sub: 'Code snippets, logic, or docs.' },
   { value: 'spiritual', icon: 'fa-solid fa-book-bible', title: 'Spiritual', sub: 'Scriptures, prayers, or insights.' },
 ];
-export type SaveStatus = 'idle' | 'unsaved' | 'saving' | 'saved' | 'error';
+export type SaveStatus = 'idle' | 'unsaved' | 'saving' | 'saved' | 'error' | 'degraded' | 'circuit-open';
 export type Theme = 'light' | 'dark' | 'system';
 
 export interface NoteListItem {

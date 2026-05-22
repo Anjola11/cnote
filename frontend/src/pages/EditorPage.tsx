@@ -10,9 +10,13 @@ import Toolbar from '../components/editor/Toolbar';
 import RichEditor from '../components/editor/RichEditor';
 import Switch from '../components/ui/Switch';
 import SaveStatusIndicator from '../components/editor/SaveStatus';
+import OfflineBanner from '../components/editor/OfflineBanner';
 import { useNote, usePatchNote, useDeleteNote, useShareNote } from '../hooks/useNotes';
 import { useAutoSave } from '../hooks/useAutoSave';
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useLoader } from '../context/LoaderContext';
+import { useThemeContext } from '../context/ThemeContext';
+import { adaptEditorColors } from '../utils/colorAdaptation';
 import toast from 'react-hot-toast';
 import type { SaveStatus, Category } from '../types';
 import type { Editor } from '@tiptap/react';
@@ -38,6 +42,15 @@ export default function EditorPage() {
   const [editorInstance, setEditorInstance] = useState<Editor | null>(null);
   const titleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const titleInitialized = useRef(false);
+
+  // Issue 3: Offline detection & API failure lock
+  const isOnline = useOnlineStatus();
+  const isEffectivelyOnline = isOnline && saveStatus !== 'circuit-open';
+  const wasOnlineRef = useRef(isEffectivelyOnline);
+
+  // Issue 5: Dark mode color adaptation
+  const { isDark } = useThemeContext();
+  const colorAdaptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (note && !titleInitialized.current) {
@@ -71,6 +84,37 @@ export default function EditorPage() {
   const handleEditorReady = useCallback((editor: Editor) => {
     setEditorInstance(editor);
   }, []);
+
+  /* Issue 3: Offline → Online transition: show toast.
+   * NOTE: If the auto-save debounce was in-flight when going offline,
+   * it may have been lost. The auto-save hook should ideally cancel
+   * pending saves on offline and re-queue on reconnect — deferred. */
+  useEffect(() => {
+    if (isEffectivelyOnline && !wasOnlineRef.current && isEditing) {
+      toast.success('Back online — editing resumed.', { duration: 3000, id: 'connectivity' });
+    }
+    wasOnlineRef.current = isEffectivelyOnline;
+  }, [isEffectivelyOnline, isEditing]);
+
+  /* Issue 5: Adapt inline-colored text for dark mode.
+   * On theme change, run a full DOM walk immediately.
+   * On editor content updates, debounce at 200ms to avoid perf issues. */
+  useEffect(() => {
+    if (editorInstance) {
+      adaptEditorColors(editorInstance.view.dom, isDark);
+    }
+  }, [isDark, editorInstance]);
+
+  useEffect(() => {
+    if (!editorInstance || !isDark) return;
+    // Debounced re-adaptation when content changes in dark mode
+    colorAdaptTimerRef.current = setTimeout(() => {
+      adaptEditorColors(editorInstance.view.dom, true);
+    }, 200);
+    return () => {
+      if (colorAdaptTimerRef.current) clearTimeout(colorAdaptTimerRef.current);
+    };
+  }, [content, editorInstance, isDark]);
 
 
   const handleDelete = () => {
@@ -175,6 +219,7 @@ export default function EditorPage() {
           <Toolbar
             editor={editorInstance}
             noteId={id!}
+            disabled={!isEffectivelyOnline}
           />
         )}
 
@@ -182,9 +227,12 @@ export default function EditorPage() {
           content={note.content}
           onUpdate={setContent}
           onEditorReady={handleEditorReady}
-          editable={isEditing}
+          editable={isEditing && isEffectivelyOnline}
         />
       </main>
+
+      {/* Issue 3: Offline lock overlay */}
+      {!isEffectivelyOnline && isEditing && <OfflineBanner />}
 
       <Modal
         isOpen={showDeleteModal}

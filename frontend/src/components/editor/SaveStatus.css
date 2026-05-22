@@ -23,3 +23,9 @@
 .save-status--error {
   color: var(--danger);
 }
+.save-status--degraded {
+  color: var(--warning, #eab308);
+}
+.save-status--degraded .save-status__dot {
+  background: var(--warning, #eab308);
+}
