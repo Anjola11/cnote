@@ -147,6 +147,7 @@ class PublicNoteOut(BaseModel):
 class PublicNoteMetaOut(BaseModel):
     title: str | None = None
     excerpt: str | None = None
+    coverImageUrl: str | None = None
 
 
 class PublicNoteMetaResponse(BaseModel):

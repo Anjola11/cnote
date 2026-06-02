@@ -50,7 +50,7 @@ export default async function middleware(request: Request) {
     backendUrl = backendUrl.slice(0, -1);
   }
 
-  const metaUrl = `${backendUrl}/notes/public/${shareToken}/meta`;
+  const metaUrl = `${backendUrl}/public/notes/${shareToken}/meta`;
 
   let metadata: { title: string; excerpt: string; coverImageUrl: string | null } | null = null;
   try {

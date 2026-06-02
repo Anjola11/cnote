@@ -428,23 +428,32 @@ class NoteServices:
 
     async def get_public_note_meta(self, share_token: str, session: AsyncSession) -> dict:
         result = await session.exec(
-            select(Note.title, Note.content_text)
+            select(Note)
+            .options(selectinload(Note.media))
             .where(
                 Note.share_token == share_token,
                 Note.is_public == True,
                 Note.deleted_at == None,
             )
         )
-        note_meta = result.first()
+        note = result.first()
 
-        if not note_meta:
+        if not note:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Public note metadata not found",
             )
 
-        title, content_text = note_meta
+        cover_image_url = None
+        if note.media:
+            cover_image_url = note.media[0].url
+
+        if not cover_image_url:
+            # Fallback to Cnote brand asset
+            cover_image_url = "https://www.usecnote.xyz/og-image.png"
+
         return {
-            "title": title or "Untitled Note",
-            "excerpt": (content_text[:160] + "...") if content_text and len(content_text) > 160 else (content_text or "No content available."),
+            "title": note.title or "Untitled Note",
+            "excerpt": (note.content_text[:160] + "...") if note.content_text and len(note.content_text) > 160 else (note.content_text or "No content available."),
+            "coverImageUrl": cover_image_url,
         }
