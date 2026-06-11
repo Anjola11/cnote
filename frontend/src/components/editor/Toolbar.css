@@ -85,7 +85,8 @@
 
 /* Color picker */
 .toolbar__color-wrapper,
-.toolbar__link-wrapper {
+.toolbar__link-wrapper,
+.toolbar__table-wrapper {
   position: relative;
 }
 .toolbar__color-popover {

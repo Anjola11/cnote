@@ -4,6 +4,10 @@ import Underline from '@tiptap/extension-underline';
 import { TextStyle } from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
 import Link from '@tiptap/extension-link';
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableHeader } from '@tiptap/extension-table-header';
+import { TableCell } from '@tiptap/extension-table-cell';
 import Heading from '@tiptap/extension-heading';
 import Placeholder from '@tiptap/extension-placeholder';
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
@@ -17,6 +21,7 @@ import { useEffect } from 'react';
 import CodeBlockComponent from './CodeBlockComponent';
 import { CustomImage } from './ImageExtension';
 import { Scripture } from './ScriptureExtension';
+import TableBubbleMenu from './TableBubbleMenu';
 import './RichEditor.css';
 
 const lowlight = createLowlight(common);
@@ -173,6 +178,12 @@ export default function RichEditor({ content, onUpdate, onEditorReady, editable 
         lowlight,
       }),
       Scripture,
+      Table.configure({
+        resizable: true,
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
     ],
     content: content as any,
     editable,
@@ -229,6 +240,7 @@ export default function RichEditor({ content, onUpdate, onEditorReady, editable 
   return (
     <div className="rich-editor" data-gramm="false" data-enable-grammarly="false">
       <EditorContent editor={editor} />
+      {editor && <TableBubbleMenu editor={editor} />}
     </div>
   );
 }

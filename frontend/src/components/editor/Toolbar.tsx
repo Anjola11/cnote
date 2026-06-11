@@ -4,6 +4,7 @@ import type { Editor } from '@tiptap/react';
 import './Toolbar.css';
 import ImageUploadModal from './ImageUploadModal';
 import ScriptureBlock from './ScriptureBlock';
+import TablePicker from './TablePicker';
 
 interface ToolbarProps {
   editor: Editor | null;
@@ -146,6 +147,7 @@ export default function Toolbar({ editor, noteId, disabled = false }: ToolbarPro
   const [showLangPicker, setShowLangPicker] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
   const [showAnchorPicker, setShowAnchorPicker] = useState(false);
+  const [showTablePicker, setShowTablePicker] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
 
   const linkBtnRef = useRef<HTMLButtonElement>(null);
@@ -153,6 +155,7 @@ export default function Toolbar({ editor, noteId, disabled = false }: ToolbarPro
   const langBtnRef = useRef<HTMLButtonElement>(null);
   const scriptureBtnRef = useRef<HTMLButtonElement>(null);
   const anchorBtnRef = useRef<HTMLButtonElement>(null);
+  const tableBtnRef = useRef<HTMLButtonElement>(null);
 
   const [showScripturePopover, setShowScripturePopover] = useState(false);
 
@@ -365,6 +368,23 @@ export default function Toolbar({ editor, noteId, disabled = false }: ToolbarPro
       <ToolBtn active={editor.isActive('blockquote')} onClick={() => editor.chain().focus().toggleBlockquote().run()} title="Blockquote">
         <i className="fa-solid fa-quote-left" />
       </ToolBtn>
+
+      {/* Table */}
+      <div className="toolbar__table-wrapper">
+        <ToolBtn
+          ref={tableBtnRef}
+          active={editor.isActive('table') || showTablePicker}
+          onClick={() => setShowTablePicker(!showTablePicker)}
+          title="Insert Table"
+        >
+          <i className="fa-solid fa-table" />
+        </ToolBtn>
+        {showTablePicker && (
+          <ToolbarPopover anchorRef={tableBtnRef} onClose={() => setShowTablePicker(false)}>
+            <TablePicker editor={editor} onClose={() => setShowTablePicker(false)} />
+          </ToolbarPopover>
+        )}
+      </div>
 
       <span className="toolbar__divider" />
 

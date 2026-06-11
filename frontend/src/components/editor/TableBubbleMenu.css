@@ -1,0 +1,74 @@
+/* ── Table Bubble Menu ── */
+
+.table-bubble {
+  position: absolute;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  animation: tableBubbleFadeIn 0.15s ease-out;
+}
+
+@keyframes tableBubbleFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.table-bubble__btn {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.table-bubble__btn:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+.table-bubble__btn--danger {
+  color: var(--text-secondary);
+}
+.table-bubble__btn--danger:hover {
+  background: rgba(220, 38, 38, 0.1);
+  color: var(--danger);
+}
+
+.table-bubble__divider {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
+/* On mobile, make buttons bigger for touch */
+@media (max-width: 768px) {
+  .table-bubble {
+    gap: 1px;
+    padding: 4px 6px;
+    overflow-x: auto;
+    max-width: calc(100vw - 24px);
+  }
+  .table-bubble__btn {
+    min-width: 36px;
+    height: 36px;
+  }
+}

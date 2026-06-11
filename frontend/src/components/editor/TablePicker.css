@@ -1,0 +1,220 @@
+/* ── Table Picker Dropdown ── */
+
+.table-picker {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 12px;
+  min-width: 200px;
+}
+
+.table-picker__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.table-picker__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.table-picker__mode-toggle {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.table-picker__mode-toggle:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+/* ── Grid Mode ── */
+
+.table-picker__grid-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.table-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(6, 26px);
+  gap: 3px;
+}
+
+.table-picker__cell {
+  width: 26px;
+  height: 26px;
+  border: 1.5px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  background: transparent;
+}
+.table-picker__cell:hover {
+  border-color: var(--accent);
+}
+.table-picker__cell--active {
+  background: var(--accent-light);
+  border-color: var(--accent);
+}
+
+.table-picker__preview-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: center;
+  min-height: 20px;
+  line-height: 20px;
+}
+
+.table-picker__custom-link {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 0;
+  transition: color 0.15s;
+}
+.table-picker__custom-link:hover {
+  color: var(--accent);
+}
+
+/* ── Stepper Mode ── */
+
+.table-picker__stepper-wrapper,
+.table-picker__custom {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.table-picker__stepper-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.table-picker__stepper-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  min-width: 64px;
+}
+
+.table-picker__stepper-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.table-picker__stepper-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.table-picker__stepper-btn:hover:not(:disabled) {
+  background: var(--bg-secondary);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.table-picker__stepper-btn:active:not(:disabled) {
+  transform: scale(0.94);
+}
+.table-picker__stepper-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Mobile: enlarge touch targets to 44px */
+@media (hover: none) {
+  .table-picker__stepper-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 18px;
+  }
+}
+
+.table-picker__stepper-value {
+  min-width: 28px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Insert & Back buttons ── */
+
+.table-picker__insert-btn {
+  width: 100%;
+  padding: 8px 16px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.table-picker__insert-btn:hover {
+  background: var(--accent-hover);
+}
+.table-picker__insert-btn:active {
+  transform: scale(0.97);
+}
+
+.table-picker__custom-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.table-picker__back-btn {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.table-picker__back-btn:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+.table-picker__custom-actions .table-picker__insert-btn {
+  flex: 1;
+}
