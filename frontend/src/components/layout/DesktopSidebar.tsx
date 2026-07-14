@@ -52,6 +52,9 @@ export default function DesktopSidebar() {
           <Link to="/feed" className={`desktop-sidebar__link ${location.pathname === '/feed' ? 'active' : ''}`}>
             <i className="fa-solid fa-house" /> Home
           </Link>
+          <Link to="/forms" className={`desktop-sidebar__link ${location.pathname.startsWith('/forms') ? 'active' : ''}`}>
+            <i className="fa-solid fa-clipboard-list" /> Forms
+          </Link>
         </div>
 
         <div className="desktop-sidebar__scrollable">

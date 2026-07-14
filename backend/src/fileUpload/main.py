@@ -153,7 +153,30 @@ class FileUploadServices:
                 detail=f"Cloudinary upload failed: {str(e)}"
             )
         
+    async def upload_form_logo(self, file: UploadFile, user_id: uuid.UUID, form_id: str):
+        await self.validate_file(file, ImageCategory.AVATAR)
+
+        file_path = f"CNOTE/FORMS/{user_id}/{form_id}"
+
+        try:
+            response = await asyncio.to_thread(
+                upload,
+                file.file,
+                folder=file_path,
+                resource_type="auto"
+            )
+            return {
+                "public_id": response["public_id"],
+                "url": response.get("secure_url"),
+            }
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Cloudinary upload failed: {str(e)}"
+            )
+
     async def delete_file(self, cloudinary_public_id: str):
+
         try:
             await asyncio.to_thread(
                 destroy,

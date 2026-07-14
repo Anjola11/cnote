@@ -139,6 +139,9 @@ export default function Navbar({ hideOnDesktop }: NavbarProps) {
             <Link to="/feed" className={`sidebar-drawer__link ${location.pathname === '/feed' ? 'active' : ''}`} onClick={closeSidebar}>
               <i className="fa-solid fa-house" /> Home
             </Link>
+            <Link to="/forms" className={`sidebar-drawer__link ${location.pathname.startsWith('/forms') ? 'active' : ''}`} onClick={closeSidebar}>
+              <i className="fa-solid fa-clipboard-list" /> Forms
+            </Link>
           </div>
 
           <div className="sidebar-drawer__history">

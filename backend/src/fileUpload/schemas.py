@@ -28,3 +28,14 @@ class NoteImageUploadResponse(BaseModel):
     success: bool
     message: str
     data: NoteImageUploadOut
+
+
+class FormLogoUploadOut(BaseModel):
+    public_id: str
+    url: str | None = None
+
+
+class FormLogoUploadResponse(BaseModel):
+    success: bool
+    message: str
+    data: FormLogoUploadOut

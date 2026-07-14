@@ -13,6 +13,8 @@ from src.config import Config
 from src.auth.models import User, SignupOtp, ForgotPasswordOtp
 from src.notes.models import Note, NoteMediaUpload
 from src.preferences.models import UserPreference
+from src.forms.models import Form, FormField, FormResponse, FormAnswer  # noqa: F401
+
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

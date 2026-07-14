@@ -12,6 +12,10 @@ import PublicNotePage from './pages/PublicNotePage';
 import NotFoundPage from './pages/NotFoundPage';
 import ProfilePage from './pages/ProfilePage';
 import BinPage from './pages/BinPage';
+import FormsListPage from './pages/FormsListPage';
+import FormBuilderPage from './pages/FormBuilderPage';
+import FormResponsesPage from './pages/FormResponsesPage';
+import PublicFormPage from './pages/PublicFormPage';
 import CnoteLoader from './components/ui/CnoteLoader';
 import { Toaster } from 'react-hot-toast';
 
@@ -43,7 +47,11 @@ function AppRoutes() {
       <Route path="/bin" element={<RequireAuth><BinPage /></RequireAuth>} />
       <Route path="/editor/:id" element={<RequireAuth><EditorPage /></RequireAuth>} />
       <Route path="/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
+      <Route path="/forms" element={<RequireAuth><FormsListPage /></RequireAuth>} />
+      <Route path="/forms/:id/edit" element={<RequireAuth><FormBuilderPage /></RequireAuth>} />
+      <Route path="/forms/:id/responses" element={<RequireAuth><FormResponsesPage /></RequireAuth>} />
       <Route path="/public/note/:shareToken" element={<PublicNotePage />} />
+      <Route path="/public/forms/:id" element={<PublicFormPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
