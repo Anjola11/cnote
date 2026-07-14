@@ -210,3 +210,30 @@ class PublicFormResponse(BaseModel):
     success: bool
     message: str
     data: PublicFormOut
+
+
+class EditResponseIn(BaseModel):
+    answers: list[AnswerIn]
+
+
+class BulkDeleteResponsesIn(BaseModel):
+    response_ids: list[UUID]
+
+
+class BulkDeleteResponse_(BaseModel):
+    success: bool
+    message: str
+    data: dict[str, int]
+
+
+class ResponseDeleteResponse(BaseModel):
+    success: bool
+    message: str
+    data: dict[str, str]
+
+
+class EditResponseResponse(BaseModel):
+    success: bool
+    message: str
+    data: FormResponseOut
+

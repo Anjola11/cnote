@@ -11,12 +11,14 @@ class NextResponse {
 export default async function middleware(request: Request) {
   const url = new URL(request.url);
 
-  // 1. Double check pathname matches only /public/note/
-  if (!url.pathname.startsWith('/public/note/')) {
+  const isNote = url.pathname.startsWith('/public/note/');
+  const isForm = url.pathname.startsWith('/public/forms/');
+
+  if (!isNote && !isForm) {
     return NextResponse.next();
   }
 
-  // 2. Detect crawlers (case-insensitive checks)
+  // Detect crawlers (case-insensitive checks)
   const userAgent = request.headers.get('user-agent') || '';
   const crawlerKeywords = [
     'whatsapp',
@@ -32,53 +34,71 @@ export default async function middleware(request: Request) {
     userAgent.toLowerCase().includes(keyword)
   );
 
-  // 3. Non-crawler request -> pass through to React App
+  // Non-crawler request -> pass through to React App
   if (!isCrawler) {
     return NextResponse.next();
   }
 
-  // 4. Crawler request -> Extract shareToken
+  // Crawler request -> Extract token / ID
   const pathParts = url.pathname.split('/');
-  const shareToken = pathParts[3]; // format: /public/note/:shareToken
-  if (!shareToken) {
+  const tokenOrId = pathParts[3]; // format: /public/note/:shareToken or /public/forms/:id
+  if (!tokenOrId) {
     return NextResponse.next();
   }
 
-  // 5. Fetch public note metadata from backend API
+  // Fetch metadata from backend API
   let backendUrl = process.env.VITE_API_URL || 'https://cnote-backend.herokuapp.com/api/v1';
   if (backendUrl.endsWith('/')) {
     backendUrl = backendUrl.slice(0, -1);
   }
 
-  const metaUrl = `${backendUrl}/public/notes/${shareToken}/meta`;
+  let title = '';
+  let excerpt = '';
+  let coverImageUrl = '';
 
-  let metadata: { title: string; excerpt: string; coverImageUrl: string | null } | null = null;
-  try {
-    const metaResponse = await fetch(metaUrl);
-    if (metaResponse.ok) {
-      const json = await metaResponse.json();
-      metadata = json.data || json;
+  if (isNote) {
+    const metaUrl = `${backendUrl}/public/notes/${tokenOrId}/meta`;
+    try {
+      const metaResponse = await fetch(metaUrl);
+      if (metaResponse.ok) {
+        const json = await metaResponse.json();
+        const metadata = json.data || json;
+        title = metadata.title;
+        excerpt = metadata.excerpt || 'A public note on Cnote.';
+        coverImageUrl = metadata.coverImageUrl || 'https://www.usecnote.xyz/og-image.png';
+      }
+    } catch (error) {
+      // Fail silently and fall through
     }
-  } catch (error) {
-    // Fail silently and fall through to the React App
+  } else {
+    // Form path
+    const metaUrl = `${backendUrl}/public/forms/${tokenOrId}`;
+    try {
+      const metaResponse = await fetch(metaUrl);
+      if (metaResponse.ok) {
+        const json = await metaResponse.json();
+        const formObj = json.data || json;
+        title = formObj.title;
+        excerpt = formObj.description || 'Fill out this form on Cnote.';
+        coverImageUrl = formObj.logo_url || 'https://www.usecnote.xyz/og-image.png';
+      }
+    } catch (error) {
+      // Fail silently and fall through
+    }
   }
 
   // If fetch failed or metadata is invalid -> fall through
-  if (!metadata || !metadata.title) {
+  if (!title) {
     return NextResponse.next();
   }
 
-  // 6. Read the static index.html and inject OG/Twitter tags
+  // Read the static index.html and inject OG/Twitter tags
   try {
     const htmlResponse = await fetch(`${url.origin}/index.html`);
     if (!htmlResponse.ok) {
       return NextResponse.next();
     }
     const html = await htmlResponse.text();
-
-    const title = metadata.title;
-    const excerpt = metadata.excerpt || 'A public note on Cnote.';
-    const coverImageUrl = metadata.coverImageUrl || 'https://www.usecnote.xyz/og-image.png';
 
     // Strip any existing title, og:* and twitter:* tags to prevent duplication
     let modifiedHtml = html
@@ -100,7 +120,7 @@ export default async function middleware(request: Request) {
     <meta property="og:title" content="${escapeHtml(title)}" />
     <meta property="og:description" content="${escapeHtml(excerpt)}" />
     <meta property="og:image" content="${escapeHtml(coverImageUrl)}" />
-    <meta property="og:url" content="https://www.usecnote.xyz/public/note/${shareToken}" />
+    <meta property="og:url" content="https://www.usecnote.xyz${url.pathname}" />
     <meta property="og:type" content="article" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="${escapeHtml(title)}" />
@@ -121,5 +141,5 @@ export default async function middleware(request: Request) {
 }
 
 export const config = {
-  matcher: ['/public/note/:shareToken*'],
+  matcher: ['/public/note/:shareToken*', '/public/forms/:id*'],
 };

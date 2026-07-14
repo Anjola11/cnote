@@ -283,3 +283,261 @@
   padding: 12px 20px;
   border-top: 1px solid var(--border);
 }
+
+/* Response count badge in header */
+.responses-header__title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.responses-badge {
+  background: var(--accent-light);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  display: inline-block;
+}
+
+/* Checkbox column */
+.responses-table__checkbox-col {
+  width: 40px;
+  text-align: center;
+  padding: 10px 6px !important;
+}
+.responses-table__checkbox-col input[type="checkbox"] {
+  accent-color: var(--accent);
+  cursor: pointer;
+  width: 14px;
+  height: 14px;
+}
+
+/* Selected row styling */
+.responses-table tr.row-selected td {
+  background: var(--accent-light) !important;
+}
+
+/* Actions column */
+.responses-table__actions-header {
+  width: 70px;
+  text-align: center !important;
+}
+.responses-table__actions {
+  width: 70px;
+  text-align: center;
+  padding: 8px 12px !important;
+  vertical-align: middle;
+}
+.responses-row-delete-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s;
+}
+.responses-row-delete-btn:hover {
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  color: var(--danger);
+}
+
+/* Inline Edit Cells */
+.responses-table__cell {
+  cursor: pointer;
+  position: relative;
+  transition: background 0.1s;
+}
+.responses-table__cell:hover {
+  background: color-mix(in srgb, var(--accent) 5%, transparent) !important;
+}
+
+.cell-display-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Option mismatch warning style */
+.cell-warning {
+  color: var(--text-muted) !important;
+  font-style: italic;
+}
+.cell-warning-icon {
+  color: var(--warning);
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+/* Cell inputs & datalist edit mode */
+.cell-edit-input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-light);
+}
+
+/* Textarea popover style */
+.cell-edit-textarea-popover {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 50;
+  width: 280px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cell-edit-textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+  resize: vertical;
+}
+.cell-edit-textarea:focus {
+  border-color: var(--accent);
+}
+.cell-edit-popover-hint {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-align: right;
+}
+
+/* Multi select popover styled as dropdown card */
+.cell-edit-multi-popover {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 50;
+  width: 220px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  outline: none;
+}
+.cell-edit-multi-list {
+  max-height: 150px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cell-edit-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.cell-edit-checkbox-row input[type="checkbox"] {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.cell-edit-multi-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.cell-edit-multi-btn {
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+}
+.cell-edit-multi-btn--cancel {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+/* Floating Sticky selection bar */
+.responses-select-bar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  z-index: 80;
+  width: calc(100% - 32px);
+  max-width: 480px;
+}
+.responses-select-bar__count {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.responses-select-bar__actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Modals styles */
+.responses-delete-modal-text {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+.responses-delete-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* Select cell editor container and styling */
+.cell-edit-select-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+}
+.cell-edit-select {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+  box-shadow: 0 0 0 2px var(--accent-light);
+}
+.cell-edit-input--custom {
+  margin-top: 4px;
+}
+

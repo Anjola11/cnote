@@ -65,6 +65,15 @@ export const formsApi = {
   listResponses: (formId: string, params?: { limit?: number; offset?: number }) =>
     api.get<{ data: FormResponseItem[] }>(`/forms/${formId}/responses`, { params }).then(r => r.data.data),
 
+  deleteResponse: (formId: string, responseId: string) =>
+    api.delete(`/forms/${formId}/responses/${responseId}`).then(r => r.data),
+
+  bulkDeleteResponses: (formId: string, responseIds: string[]) =>
+    api.delete(`/forms/${formId}/responses`, { data: { response_ids: responseIds } }).then(r => r.data),
+
+  editResponse: (formId: string, responseId: string, answers: AnswerIn[]) =>
+    api.patch<{ data: FormResponseItem }>(`/forms/${formId}/responses/${responseId}`, { answers }).then(r => r.data.data),
+
   getSummary: (formId: string) =>
     api.get<{ data: ResponseSummaryField[] }>(`/forms/${formId}/responses/summary`).then(r => r.data.data),
 

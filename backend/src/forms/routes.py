@@ -21,6 +21,11 @@ from src.forms.schemas import (
     ResponsesSummaryResponse,
     SubmitResponseIn,
     SubmitResponseOut,
+    BulkDeleteResponsesIn,
+    BulkDeleteResponse_,
+    ResponseDeleteResponse,
+    EditResponseIn,
+    EditResponseResponse,
 )
 from src.forms.services import FormServices
 from src.limiter import get_user_id_or_ip, limiter
@@ -261,6 +266,66 @@ async def export_responses_csv(
         media_type="text/csv",
         headers={"Content-Disposition": f'attachment; filename="form-{form_id}-responses.csv"'},
     )
+
+
+@forms_router.delete("/{form_id}/responses/{response_id}", response_model=ResponseDeleteResponse, status_code=status.HTTP_200_OK)
+@limiter.limit("60/minute", key_func=get_user_id_or_ip)
+async def delete_response(
+    request: Request,
+    form_id: UUID,
+    response_id: UUID,
+    user_id=Depends(get_verified_user_id),
+    session: AsyncSession = Depends(get_session),
+    form_services: FormServices = Depends(get_form_services),
+):
+    result = await form_services.delete_response(
+        form_id=form_id,
+        response_id=response_id,
+        user_id=user_id,
+        session=session,
+    )
+    return success_response(message="Response deleted successfully", data=result)
+
+
+@forms_router.delete("/{form_id}/responses", response_model=BulkDeleteResponse_, status_code=status.HTTP_200_OK)
+@limiter.limit("60/minute", key_func=get_user_id_or_ip)
+async def bulk_delete_responses(
+    request: Request,
+    form_id: UUID,
+    body: BulkDeleteResponsesIn,
+    user_id=Depends(get_verified_user_id),
+    session: AsyncSession = Depends(get_session),
+    form_services: FormServices = Depends(get_form_services),
+):
+    result = await form_services.bulk_delete_responses(
+        form_id=form_id,
+        response_ids=body.response_ids,
+        user_id=user_id,
+        session=session,
+    )
+    return success_response(message="Responses deleted successfully", data=result)
+
+
+@forms_router.patch("/{form_id}/responses/{response_id}", response_model=EditResponseResponse, status_code=status.HTTP_200_OK)
+@limiter.limit("60/minute", key_func=get_user_id_or_ip)
+async def edit_response(
+    request: Request,
+    form_id: UUID,
+    response_id: UUID,
+    body: EditResponseIn,
+    user_id=Depends(get_verified_user_id),
+    session: AsyncSession = Depends(get_session),
+    form_services: FormServices = Depends(get_form_services),
+):
+    updated = await form_services.edit_response(
+        form_id=form_id,
+        response_id=response_id,
+        answers_input=body.answers,
+        user_id=user_id,
+        session=session,
+      )
+    return success_response(message="Response updated", data=updated)
+
 
 
 # ──────────────────────────────────────────────────────────────────────────────

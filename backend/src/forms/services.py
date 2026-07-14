@@ -633,3 +633,141 @@ class FormServices:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal server error",
             )
+
+    async def delete_response(self, *, form_id: UUID, response_id: UUID, user_id: UUID, session: AsyncSession) -> dict:
+        await self._get_form(form_id, user_id, session)
+
+        result = await session.exec(
+            select(FormResponse).where(
+                FormResponse.id == response_id,
+                FormResponse.form_id == form_id,
+            )
+        )
+        response = result.first()
+        if not response:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Response not found",
+            )
+
+        try:
+            await session.delete(response)
+            await session.commit()
+            logger.info(f"Permanently deleted response {response_id} from form {form_id}")
+            return {"detail": "Response deleted successfully"}
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Error deleting response {response_id}: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error",
+            )
+
+    async def bulk_delete_responses(self, *, form_id: UUID, response_ids: list[UUID], user_id: UUID, session: AsyncSession) -> dict:
+        await self._get_form(form_id, user_id, session)
+
+        if not response_ids:
+            return {"deleted_count": 0}
+
+        try:
+            from sqlmodel import delete
+            # Delete answers first to avoid foreign key violations, then responses
+            stmt_answers = delete(FormAnswer).where(FormAnswer.response_id.in_(response_ids))
+            await session.exec(stmt_answers)
+
+            stmt_responses = delete(FormResponse).where(
+                FormResponse.id.in_(response_ids),
+                FormResponse.form_id == form_id,
+            )
+            result = await session.exec(stmt_responses)
+            await session.commit()
+
+            deleted_count = result.rowcount
+            logger.info(f"Bulk deleted {deleted_count} responses from form {form_id}")
+            return {"deleted_count": deleted_count}
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Error bulk deleting responses: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error",
+            )
+
+    async def edit_response(
+        self,
+        *,
+        form_id: UUID,
+        response_id: UUID,
+        answers_input: list[AnswerIn],
+        user_id: UUID,
+        session: AsyncSession,
+    ) -> FormResponse:
+        form = await self._get_form_with_fields(form_id, user_id, session)
+
+        resp_result = await session.exec(
+            select(FormResponse)
+            .options(selectinload(FormResponse.answers))
+            .where(
+                FormResponse.id == response_id,
+                FormResponse.form_id == form_id,
+            )
+        )
+        response = resp_result.first()
+        if not response:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Response not found",
+            )
+
+        # Merge existing answers with patched answers for validation
+        existing_answers = {a.field_id: a.value for a in response.answers}
+        patch_answers = {a.field_id: a.value for a in answers_input}
+        merged_answers_map = {**existing_answers, **patch_answers}
+        merged_answers_list = [
+            AnswerIn(field_id=fid, value=val)
+            for fid, val in merged_answers_map.items()
+            if val is not None
+        ]
+
+        errors = self._validate_answers(form, merged_answers_list)
+        if errors:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={"errors": errors},
+            )
+
+        try:
+            ans_obj_map = {a.field_id: a for a in response.answers}
+            field_ids = {f.id for f in form.fields}
+
+            for answer in answers_input:
+                if answer.field_id not in field_ids:
+                    continue
+
+                if answer.field_id in ans_obj_map:
+                    ans_obj_map[answer.field_id].value = answer.value
+                    session.add(ans_obj_map[answer.field_id])
+                else:
+                    new_ans = FormAnswer(
+                        response_id=response_id,
+                        field_id=answer.field_id,
+                        value=answer.value,
+                    )
+                    session.add(new_ans)
+
+            await session.commit()
+
+            updated_resp = await session.exec(
+                select(FormResponse)
+                .options(selectinload(FormResponse.answers))
+                .where(FormResponse.id == response_id)
+            )
+            return updated_resp.first()
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Error editing response {response_id}: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error",
+            )
+

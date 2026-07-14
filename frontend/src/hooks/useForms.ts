@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { formsApi } from '../services/formsApi';
-import type { Form, FormField } from '../types/forms';
+import type { Form, FormField, FormResponseItem, AnswerIn } from '../types/forms';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -359,3 +359,149 @@ export function useUploadFormLogo(formId: string) {
     },
   });
 }
+
+// ─── Response mutations ───────────────────────────────────────────────────────
+
+export function useDeleteResponse(formId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (responseId: string) => formsApi.deleteResponse(formId, responseId),
+    onMutate: async (responseId) => {
+      await queryClient.cancelQueries({ queryKey: ['form_responses', formId] });
+      
+      const queryCache = queryClient.getQueryCache();
+      const matchingQueries = queryCache.findAll({ queryKey: ['form_responses', formId] });
+      
+      const previousQueries = matchingQueries.map(query => ({
+        queryKey: query.queryKey,
+        data: query.state.data,
+      }));
+
+      // Optimistically remove from all matching caches
+      matchingQueries.forEach(query => {
+        queryClient.setQueryData(query.queryKey, (old: FormResponseItem[] | undefined) => {
+          return old?.filter(r => r.id !== responseId) ?? [];
+        });
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['form_summary', formId] });
+
+      return { previousQueries };
+    },
+    onError: (_err, _vars, context: any) => {
+      if (context?.previousQueries) {
+        context.previousQueries.forEach(({ queryKey, data }: any) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+      toast.error('Could not delete response — reverted.');
+    },
+  });
+}
+
+export function useBulkDeleteResponses(formId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (responseIds: string[]) => formsApi.bulkDeleteResponses(formId, responseIds),
+    onMutate: async (responseIds) => {
+      const responseIdsSet = new Set(responseIds);
+      await queryClient.cancelQueries({ queryKey: ['form_responses', formId] });
+      
+      const queryCache = queryClient.getQueryCache();
+      const matchingQueries = queryCache.findAll({ queryKey: ['form_responses', formId] });
+      
+      const previousQueries = matchingQueries.map(query => ({
+        queryKey: query.queryKey,
+        data: query.state.data,
+      }));
+
+      // Optimistically remove from all matching caches
+      matchingQueries.forEach(query => {
+        queryClient.setQueryData(query.queryKey, (old: FormResponseItem[] | undefined) => {
+          return old?.filter(r => !responseIdsSet.has(r.id)) ?? [];
+        });
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['form_summary', formId] });
+
+      return { previousQueries };
+    },
+    onError: (_err, _vars, context: any) => {
+      if (context?.previousQueries) {
+        context.previousQueries.forEach(({ queryKey, data }: any) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+      toast.error('Could not delete responses — reverted.');
+    },
+  });
+}
+
+export function useEditResponse(formId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ responseId, answers }: { responseId: string; answers: AnswerIn[] }) =>
+      formsApi.editResponse(formId, responseId, answers),
+    onMutate: async ({ responseId, answers }) => {
+      await queryClient.cancelQueries({ queryKey: ['form_responses', formId] });
+      
+      const queryCache = queryClient.getQueryCache();
+      const matchingQueries = queryCache.findAll({ queryKey: ['form_responses', formId] });
+      
+      const previousQueries = matchingQueries.map(query => ({
+        queryKey: query.queryKey,
+        data: query.state.data,
+      }));
+
+      // Optimistically edit all matching caches
+      matchingQueries.forEach(query => {
+        queryClient.setQueryData(query.queryKey, (old: FormResponseItem[] | undefined) => {
+          if (!old) return old;
+          return old.map(resp => {
+            if (resp.id !== responseId) return resp;
+
+            const updatedAnswers = [...resp.answers];
+            for (const ansIn of answers) {
+              const idx = updatedAnswers.findIndex(a => a.field_id === ansIn.field_id);
+              if (idx !== -1) {
+                updatedAnswers[idx] = { ...updatedAnswers[idx], value: ansIn.value };
+              } else {
+                updatedAnswers.push({ id: `temp-${crypto.randomUUID()}`, field_id: ansIn.field_id, value: ansIn.value });
+              }
+            }
+            return { ...resp, answers: updatedAnswers };
+          });
+        });
+      });
+
+      return { previousQueries };
+    },
+    onError: (_err, _vars, context: any) => {
+      if (context?.previousQueries) {
+        context.previousQueries.forEach(({ queryKey, data }: any) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+      toast.error('Failed to save changes — reverted.');
+    },
+    onSuccess: (updatedResponse) => {
+      const queryCache = queryClient.getQueryCache();
+      const matchingQueries = queryCache.findAll({ queryKey: ['form_responses', formId] });
+
+      // Update all matching caches with authoritative server response
+      matchingQueries.forEach(query => {
+        queryClient.setQueryData(query.queryKey, (old: FormResponseItem[] | undefined) => {
+          if (!old) return old;
+          return old.map(r => (r.id === updatedResponse.id ? updatedResponse : r));
+        });
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['form_summary', formId] });
+    },
+  });
+}
+
+

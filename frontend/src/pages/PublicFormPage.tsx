@@ -14,6 +14,65 @@ interface FieldProps {
   error?: string;
 }
 
+function PhoneFieldRenderer({ field, value, onChange, error }: FieldProps) {
+  const strVal = (value as string) || '';
+
+  const countries = [
+    { code: '+234', label: '🇳🇬 +234' },
+    { code: '+1', label: '🇺🇸 +1' },
+    { code: '+44', label: '🇬🇧 +44' },
+    { code: '+91', label: '🇮🇳 +91' },
+    { code: '+233', label: '🇬🇭 +233' },
+    { code: '+254', label: '🇰🇪 +254' },
+    { code: '+27', label: '🇿🇦 +27' },
+  ];
+
+  // Default to Nigeria (+234)
+  let activeCode = '+234';
+  let localNum = strVal;
+
+  for (const c of countries) {
+    if (strVal.startsWith(c.code)) {
+      activeCode = c.code;
+      localNum = strVal.slice(c.code.length);
+      break;
+    }
+  }
+
+  const handleCodeChange = (newCode: string) => {
+    onChange(newCode + localNum);
+  };
+
+  const handleLocalChange = (newLocal: string) => {
+    onChange(activeCode + newLocal);
+  };
+
+  return (
+    <div className="pf-phone-container">
+      <select
+        className="pf-phone-code"
+        value={activeCode}
+        onChange={e => handleCodeChange(e.target.value)}
+      >
+        {countries.map(c => (
+          <option key={c.code} value={c.code}>
+            {c.label}
+          </option>
+        ))}
+      </select>
+      <input
+        id={`field-${field.id}`}
+        className={`pf-input pf-phone-input ${error ? 'pf-input--error' : ''}`}
+        type="tel"
+        inputMode="tel"
+        placeholder="e.g. 08012345678"
+        value={localNum}
+        onChange={e => handleLocalChange(e.target.value)}
+      />
+    </div>
+  );
+}
+
 function FieldRenderer({ field, value, onChange, error }: FieldProps) {
   const [otherText, setOtherText] = useState('');
   const [otherChecked, setOtherChecked] = useState(false);
@@ -23,16 +82,25 @@ function FieldRenderer({ field, value, onChange, error }: FieldProps) {
   switch (field.type) {
     case 'short_answer':
     case 'email':
-    case 'phone':
       return (
         <input
           id={`field-${field.id}`}
           className={baseInputCls}
-          type={field.type === 'email' ? 'email' : field.type === 'phone' ? 'tel' : 'text'}
-          inputMode={field.type === 'phone' ? 'tel' : field.type === 'email' ? 'email' : 'text'}
-          placeholder={field.type === 'email' ? 'your@email.com' : field.type === 'phone' ? '+1 234 567 8900' : 'Your answer'}
+          type={field.type === 'email' ? 'email' : 'text'}
+          inputMode={field.type === 'email' ? 'email' : 'text'}
+          placeholder={field.type === 'email' ? 'your@email.com' : 'Your answer'}
           value={(value as string) || ''}
           onChange={e => onChange(e.target.value)}
+        />
+      );
+
+    case 'phone':
+      return (
+        <PhoneFieldRenderer
+          field={field}
+          value={value}
+          onChange={onChange}
+          error={error}
         />
       );
 
