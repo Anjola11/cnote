@@ -257,6 +257,7 @@ export default function PublicFormPage() {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [submissionIdempotencyKey] = useState(() => crypto.randomUUID());
 
   if (isLoading) {
     return (
@@ -341,7 +342,7 @@ export default function PublicFormPage() {
       .map(([field_id, value]) => ({ field_id, value }));
 
     try {
-      await publicFormsApi.submitResponse(id!, answersList);
+      await publicFormsApi.submitResponse(id!, answersList, submissionIdempotencyKey);
       setSubmitted(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {

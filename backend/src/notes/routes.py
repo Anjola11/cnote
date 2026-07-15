@@ -138,7 +138,8 @@ async def update_note_content(
         note_id=note_id,
         user_id=user_id,
         content=body.content,
-        session=session
+        session=session,
+        expected_version=body.version
     )
     return success_response(message="Note content updated", data=note)
 
@@ -160,7 +161,8 @@ async def update_note_content_beacon(
         note_id=note_id,
         user_id=user_id,
         content=body.content,
-        session=session
+        session=session,
+        expected_version=body.version
     )
     return {"detail": "Beacon received"}
 

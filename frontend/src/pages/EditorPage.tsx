@@ -79,7 +79,7 @@ export default function EditorPage() {
     }
   }, [isLoading, note, initialContent, setIsLoading]);
 
-  useAutoSave(id!, content, setSaveStatus, isEditing);
+  useAutoSave(id!, content, setSaveStatus, isEditing, note?.version);
 
   const handleTitleChange = useCallback((newTitle: string) => {
     if (!isEditing) return;

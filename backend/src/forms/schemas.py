@@ -117,6 +117,7 @@ class AnswerIn(BaseModel):
 
 class SubmitResponseIn(BaseModel):
     answers: list[AnswerIn]
+    idempotency_key: str | None = None
 
 
 class AnswerOut(BaseModel):

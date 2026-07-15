@@ -36,6 +36,11 @@ class Note(SQLModel, table=True):
     word_count: int = Field(default=0)
     is_public: bool = Field(default=False, index=True)
     share_token: str | None = Field(default=None, unique=True, index=True)
+    
+    version: int = Field(
+        default=1,
+        sa_column=Column(pg.INTEGER, server_default="1", nullable=False)
+    )
 
     deleted_at: Optional[datetime] = Field(
         default=None,

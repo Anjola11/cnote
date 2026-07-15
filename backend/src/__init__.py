@@ -56,6 +56,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.middleware("http")
+async def csrf_middleware(request: Request, call_next):
+    if request.method in {"POST", "PUT", "PATCH", "DELETE"}:
+        if request.cookies.get("access_token"):
+            csrf_cookie = request.cookies.get("csrf_token")
+            csrf_header = request.headers.get("X-CSRF-Token")
+            
+            if not csrf_cookie or csrf_cookie != csrf_header:
+                logger.warning(f"CSRF verification failed: cookie={csrf_cookie}, header={csrf_header}")
+                if Config.ENFORCE_CSRF:
+                    return JSONResponse(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        content={
+                            "success": False,
+                            "message": "CSRF token verification failed",
+                            "data": None
+                        }
+                    )
+    return await call_next(request)
+
 @app.get("/")
 def root_health_check():
     return "server working"

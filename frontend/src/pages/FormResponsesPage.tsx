@@ -195,8 +195,11 @@ export default function FormResponsesPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
+  const [limit] = useState(50);
+  const [offset, setOffset] = useState(0);
+
   const { data: form } = useForm(id!);
-  const { data: responses, isLoading } = useFormResponses(id!);
+  const { data: responses, isLoading } = useFormResponses(id!, { limit, offset });
   const { data: summary } = useFormSummary(id!);
 
   const deleteResponse = useDeleteResponse(id!);
@@ -511,6 +514,28 @@ export default function FormResponsesPage() {
                 ))}
               </tbody>
             </table>
+            
+            <div className="responses-pagination" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', marginTop: '1.5rem', marginBottom: '1.5rem' }}>
+              <button
+                className="responses-tab-btn"
+                style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                disabled={offset === 0}
+                onClick={() => setOffset(Math.max(0, offset - limit))}
+              >
+                <i className="fa-solid fa-chevron-left" /> Previous
+              </button>
+              <span className="responses-pagination-info" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                Showing {offset + 1} – {offset + responses.length}
+              </span>
+              <button
+                className="responses-tab-btn"
+                style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                disabled={responses.length < limit}
+                onClick={() => setOffset(offset + limit)}
+              >
+                Next <i className="fa-solid fa-chevron-right" />
+              </button>
+            </div>
           </div>
         )}
 

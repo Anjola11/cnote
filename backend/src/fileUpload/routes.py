@@ -59,12 +59,29 @@ async def upload_note_image(
     request: Request,
     file: UploadFile = File(...),
     current_user=Depends(get_verified_user),
+    session: AsyncSession = Depends(get_session),
     file_upload_services: FileUploadServices = Depends(get_file_upload_services),
 ):
+    from uuid import UUID
+    from fastapi import HTTPException
+    from sqlmodel import select
+    from src.notes.models import Note
+
+    try:
+        note_uuid = UUID(note_id)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Note not found")
+
+    note_result = await session.exec(
+        select(Note).where(Note.id == note_uuid, Note.uid == current_user.uid, Note.deleted_at == None)
+    )
+    if not note_result.first():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Note not found")
+
     upload_result = await file_upload_services.upload_note_image(
         file=file,
         user_id=current_user.uid,
-        note_id=note_id,
+        note_id=note_uuid,
     )
 
     return success_response(
@@ -80,8 +97,25 @@ async def upload_form_logo(
     request: Request,
     file: UploadFile = File(...),
     current_user=Depends(get_verified_user),
+    session: AsyncSession = Depends(get_session),
     file_upload_services: FileUploadServices = Depends(get_file_upload_services),
 ):
+    from uuid import UUID
+    from fastapi import HTTPException
+    from sqlmodel import select
+    from src.forms.models import Form
+
+    try:
+        form_uuid = UUID(form_id)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Form not found")
+
+    form_result = await session.exec(
+        select(Form).where(Form.id == form_uuid, Form.uid == current_user.uid, Form.deleted_at == None)
+    )
+    if not form_result.first():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Form not found")
+
     upload_result = await file_upload_services.upload_form_logo(
         file=file,
         user_id=current_user.uid,

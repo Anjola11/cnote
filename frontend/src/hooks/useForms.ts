@@ -20,10 +20,10 @@ function patchField(old: Form | undefined, fieldId: string, patch: Partial<FormF
 
 // ─── Queries ──────────────────────────────────────────────────────────────────
 
-export function useForms() {
+export function useForms(params?: { limit?: number; offset?: number }) {
   return useQuery({
-    queryKey: ['forms'],
-    queryFn: () => formsApi.list(),
+    queryKey: ['forms', params],
+    queryFn: () => formsApi.list(params),
   });
 }
 

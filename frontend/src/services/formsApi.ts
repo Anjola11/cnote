@@ -1,4 +1,4 @@
-import axios from 'axios';
+import api from './api';
 import type {
   AnswerIn,
   Form,
@@ -9,23 +9,10 @@ import type {
   ResponseSummaryField,
 } from '../types/forms';
 
-const getBaseURL = () => {
-  const envUrl = import.meta.env.VITE_API_URL;
-  if (!envUrl) return '/api/v1';
-  const cleanUrl = envUrl.endsWith('/') ? envUrl.slice(0, -1) : envUrl;
-  return cleanUrl.endsWith('/api/v1') ? cleanUrl : `${cleanUrl}/api/v1`;
-};
-
-// Reuse same axios instance config (withCredentials for httpOnly cookies)
-const api = axios.create({
-  baseURL: getBaseURL(),
-  withCredentials: true,
-});
-
 export const formsApi = {
   // ── CRUD ────────────────────────────────────────────────────────────────
-  list: () =>
-    api.get<{ data: FormListItem[] }>('/forms/').then(r => r.data.data),
+  list: (params?: { limit?: number; offset?: number }) =>
+    api.get<{ data: FormListItem[] }>('/forms/', { params }).then(r => r.data.data),
 
   get: (id: string) =>
     api.get<{ data: Form }>(`/forms/${id}`).then(r => r.data.data),
@@ -100,6 +87,6 @@ export const publicFormsApi = {
   getForm: (formId: string) =>
     api.get<{ data: PublicForm }>(`/public/forms/${formId}`).then(r => r.data.data),
 
-  submitResponse: (formId: string, answers: AnswerIn[]) =>
-    api.post(`/public/forms/${formId}/responses`, { answers }).then(r => r.data),
+  submitResponse: (formId: string, answers: AnswerIn[], idempotencyKey?: string) =>
+    api.post(`/public/forms/${formId}/responses`, { answers, idempotency_key: idempotencyKey }).then(r => r.data),
 };

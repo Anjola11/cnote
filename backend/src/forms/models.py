@@ -106,6 +106,7 @@ class FormField(SQLModel, table=True):
         back_populates="field",
         sa_relationship_kwargs={
             "primaryjoin": "FormField.id == FormAnswer.field_id",
+            "cascade": "all, delete-orphan",
         },
     )
 

@@ -61,11 +61,13 @@ async def create_form(
 @limiter.limit("60/minute", key_func=get_user_id_or_ip)
 async def list_forms(
     request: Request,
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     user_id=Depends(get_verified_user_id),
     session: AsyncSession = Depends(get_session),
     form_services: FormServices = Depends(get_form_services),
 ):
-    forms = await form_services.list_forms(user_id=user_id, session=session)
+    forms = await form_services.list_forms(user_id=user_id, session=session, limit=limit, offset=offset)
     return success_response(message="Forms fetched successfully", data=forms)
 
 
@@ -254,7 +256,7 @@ async def export_responses_csv(
             from fastapi import HTTPException
             raise HTTPException(status_code=400, detail="Invalid field UUID in ?fields= param")
 
-    csv_content = await form_services.export_responses_csv(
+    csv_generator = form_services.export_responses_csv_generator(
         form_id=form_id,
         user_id=user_id,
         session=session,
@@ -262,7 +264,7 @@ async def export_responses_csv(
     )
 
     return StreamingResponse(
-        iter([csv_content]),
+        csv_generator,
         media_type="text/csv",
         headers={"Content-Disposition": f'attachment; filename="form-{form_id}-responses.csv"'},
     )

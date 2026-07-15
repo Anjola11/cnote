@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     CLOUDINARY_API_KEY: str
     CLOUDINARY_API_SECRET: str 
     
+    ENFORCE_CSRF: bool = False
+    FAIL_CLOSED_REDIS: bool = False
+    
     model_config = SettingsConfigDict(
         env_file =".env",
         extra = "ignore"

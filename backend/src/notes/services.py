@@ -19,16 +19,15 @@ class NoteServices:
         if not delta_bytes:
             return
 
-        user_result = await session.exec(select(User).where(User.uid == user_id))
-        user = user_result.first()
-        if not user:
-            return
-
-        current = int(user.storage_used_bytes or 0)
-        new_total = current + int(delta_bytes)
-        user.storage_used_bytes = max(0, new_total)
-        user.updated_at = utc_now()
-        session.add(user)
+        from sqlalchemy import update, func
+        await session.execute(
+            update(User)
+            .where(User.uid == user_id)
+            .values(
+                storage_used_bytes=func.greatest(0, func.coalesce(User.storage_used_bytes, 0) + delta_bytes),
+                updated_at=utc_now()
+            )
+        )
 
     def _extract_text(self, node: dict) -> str:
         if node.get("type") == "text":
@@ -43,14 +42,16 @@ class NoteServices:
             "word_count": len(text.split()) if text.strip() else 0,
         }
 
-    async def _get_note(self, note_id: UUID, user_id: UUID, session: AsyncSession) -> Note:
-        result = await session.exec(
-            select(Note).where(
-                Note.id == note_id,
-                Note.uid == user_id,
-                Note.deleted_at == None,
-            )
+    async def _get_note(self, note_id: UUID, user_id: UUID, session: AsyncSession, for_update: bool = False) -> Note:
+        statement = select(Note).where(
+            Note.id == note_id,
+            Note.uid == user_id,
+            Note.deleted_at == None,
         )
+        if for_update:
+            statement = statement.with_for_update()
+            
+        result = await session.exec(statement)
         note = result.first()
         if not note:
             raise HTTPException(
@@ -120,8 +121,16 @@ class NoteServices:
                 detail="Internal server error",
             )
 
-    async def update_note_content(self, note_id: UUID, user_id: UUID, content: dict | None, session: AsyncSession) -> Note:
-        note = await self._get_note(note_id=note_id, user_id=user_id, session=session)
+    async def update_note_content(self, note_id: UUID, user_id: UUID, content: dict | None, session: AsyncSession, expected_version: int | None = None) -> Note:
+        note = await self._get_note(note_id=note_id, user_id=user_id, session=session, for_update=True)
+
+        if expected_version is not None:
+            if note.version != expected_version:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Conflict: Note has been modified elsewhere. Please reload."
+                )
+            note.version += 1
 
         if content is not None:
             note.content = content

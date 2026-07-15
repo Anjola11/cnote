@@ -140,6 +140,21 @@ class AuthServices:
             **settings,
             max_age=int(refresh_token_expiry.total_seconds())
         )
+        
+        # Generate and set a non-httponly cookie containing CSRF token
+        import secrets
+        csrf_token = secrets.token_hex(32)
+        
+        # Use same secure/samesite/path settings but httponly=False so frontend JS can read it
+        response.set_cookie(
+            key="csrf_token",
+            value=csrf_token,
+            httponly=False,
+            secure=settings["secure"],
+            samesite=settings["samesite"],
+            path="/",
+            max_age=int(refresh_token_expiry.total_seconds())
+        )
 
     def _clear_auth_cookies(self, *, response: Response, request: Request | None = None) -> None:
         settings = self._build_cookie_settings(request)
@@ -605,7 +620,7 @@ class AuthServices:
 
         user_payload = self._get_user_token_data(user)
         new_token = create_token(user_payload, token_type=TokenType.ACCESS)
-        await self.add_token_to_blocklist(old_refresh_token_str)
+        await self.add_token_to_blocklist(old_refresh_token_str, is_rotation=True)
         new_refresh_token = create_token(user_payload, token_type=TokenType.REFRESH)
         
         self._set_auth_cookies(
@@ -617,7 +632,7 @@ class AuthServices:
 
         return {}
     
-    async def add_token_to_blocklist(self, token):
+    async def add_token_to_blocklist(self, token, is_rotation: bool = False):
         token_decoded = decode_token(token)
         token_id = token_decoded.get('jti')
         exp_timestamp = token_decoded.get('exp')
@@ -627,17 +642,41 @@ class AuthServices:
 
         if time_to_live > 0:
             try:
-                await redis_client.setex(name=token_id, time=time_to_live, value="true")
+                value = str(current_time) if is_rotation else "true"
+                await redis_client.setex(name=token_id, time=time_to_live, value=value)
             except Exception as e:
                 logger.error(f"Redis error in add_token_to_blocklist: {e}")
-                pass
+                if Config.FAIL_CLOSED_REDIS:
+                    raise HTTPException(
+                        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                        detail="Authentication service temporarily unavailable"
+                    )
         
     async def is_token_blacklisted(self, jti: str) -> bool:
         try:
             result = await redis_client.get(jti)
-            return result is not None
+            if result is None:
+                return False
+            
+            if isinstance(result, bytes):
+                result = result.decode("utf-8")
+                
+            if result == "true":
+                return True
+                
+            try:
+                blacklisted_at = float(result)
+                current_time = datetime.now(timezone.utc).timestamp()
+                return (current_time - blacklisted_at) > 30 # 30 seconds grace period
+            except (ValueError, TypeError):
+                return True
         except Exception as e:
             logger.error(f"Redis error in is_token_blacklisted: {e}")
+            if Config.FAIL_CLOSED_REDIS:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Authentication service temporarily unavailable"
+                )
             return False
     
     async def logout(

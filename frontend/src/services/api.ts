@@ -15,6 +15,26 @@ const api = axios.create({
   withCredentials: true, // httpOnly cookie auth
 });
 
+function getCookie(name: string): string | null {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
+  return null;
+}
+
+api.interceptors.request.use(
+  config => {
+    if (config.method && ['post', 'put', 'patch', 'delete'].includes(config.method.toLowerCase())) {
+      const csrfToken = getCookie('csrf_token');
+      if (csrfToken) {
+        config.headers['X-CSRF-Token'] = csrfToken;
+      }
+    }
+    return config;
+  },
+  error => Promise.reject(error)
+);
+
 import toast from 'react-hot-toast';
 
 /**
@@ -98,18 +118,64 @@ function isSafePage(path: string) {
   return SAFE_PAGES.includes(path) || path.startsWith('/public/');
 }
 
+let isRefreshing = false;
+let failedQueue: any[] = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 // Response interceptor
 api.interceptors.response.use(
   response => response,
-  error => {
+  async error => {
+    const originalRequest = error.config;
+    const currentPath = window.location.pathname;
+
+    if (error.response?.status === 401 && !originalRequest._retry && !isSafePage(currentPath) && !originalRequest.url?.includes('/auth/renew-access-token')) {
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then(() => {
+            return api(originalRequest);
+          })
+          .catch(err => {
+            return Promise.reject(err);
+          });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        await api.post('/auth/renew-access-token');
+        isRefreshing = false;
+        processQueue(null);
+        return api(originalRequest);
+      } catch (refreshError) {
+        isRefreshing = false;
+        processQueue(refreshError);
+        toast.error('Your session has expired. Please log in again.');
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
+      }
+    }
+
     if (error.response) {
       const { status, data } = error.response;
       const rawMsg = extractBackendMessage(data);
       const mapped = mapToUserMessage(status, rawMsg);
-      const currentPath = window.location.pathname;
 
       if (status === 401) {
-        if (!isSafePage(currentPath) && !error.config?.url?.includes('/auth/me')) {
+        if (!isSafePage(currentPath) && !error.config?.url?.includes('/auth/renew-access-token')) {
           toast.error(mapped?.message || 'Your session has expired. Please log in again.');
           window.location.href = '/login';
         }
@@ -126,7 +192,6 @@ api.interceptors.response.use(
       } else if (status >= 500) {
         toast.error('Something went wrong on our end. Please try again later.');
       }
-      // For 400/422 etc., we don't show a global toast — let the calling page handle it.
     } else if (error.request) {
       toast.error('Network error. Please check your connection.');
     }
@@ -164,7 +229,7 @@ export const notesApi = {
       return api.patch<{ data: Note }>(`/notes/${id}/title`, { title: data.title }).then(r => r.data.data);
     }
     if (data.content !== undefined) {
-      return api.patch<{ data: Note }>(`/notes/${id}/content`, { content: data.content }).then(r => r.data.data);
+      return api.patch<{ data: Note }>(`/notes/${id}/content`, { content: data.content, version: (data as any).version }).then(r => r.data.data);
     }
     // Fallback if needed, though backend splits these routes
     return api.patch<{ data: Note }>(`/notes/${id}`, data).then(r => r.data.data);

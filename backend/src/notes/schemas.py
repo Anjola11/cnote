@@ -24,6 +24,7 @@ class NoteOut(BaseModel):
     word_count: int
     is_public: bool
     share_token: str | None = None
+    version: int
     created_at: datetime
     updated_at: datetime
 
@@ -99,6 +100,7 @@ class NoteTitleUpdateBody(BaseModel):
 
 class NoteContentUpdateBody(BaseModel):
     content: dict
+    version: int | None = None
 
 
 class NoteDeleteResponse(BaseModel):

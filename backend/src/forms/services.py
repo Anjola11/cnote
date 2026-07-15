@@ -107,12 +107,14 @@ class FormServices:
                 detail="Internal server error",
             )
 
-    async def list_forms(self, *, user_id: UUID, session: AsyncSession) -> list:
+    async def list_forms(self, *, user_id: UUID, session: AsyncSession, limit: int = 50, offset: int = 0) -> list:
         # Get forms
         forms_result = await session.exec(
             select(Form)
             .where(Form.uid == user_id, Form.deleted_at == None)
             .order_by(Form.updated_at.desc())
+            .offset(offset)
+            .limit(limit)
         )
         forms = forms_result.all()
 
@@ -292,6 +294,20 @@ class FormServices:
         field = await self._get_field(field_id, form_id, session)
 
         update_data = field_update.model_dump(exclude_unset=True)
+        
+        if "type" in update_data and update_data["type"] != field.type:
+            from sqlmodel import select, func
+            from src.forms.models import FormAnswer
+            answers_count_result = await session.exec(
+                select(func.count(FormAnswer.id)).where(FormAnswer.field_id == field.id)
+            )
+            answers_count = answers_count_result.one()
+            if answers_count > 0:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Cannot change field type because this form has already collected responses for this field. Please create a new field instead."
+                )
+
         for key, val in update_data.items():
             setattr(field, key, val)
 
@@ -385,21 +401,46 @@ class FormServices:
     async def get_responses_summary(self, *, form_id: UUID, user_id: UUID, session: AsyncSession) -> list[dict]:
         form = await self._get_form_with_fields(form_id, user_id, session)
 
-        # Fetch all answers for this form's fields
         field_ids = [f.id for f in form.fields]
         if not field_ids:
             return []
 
-        answers_result = await session.exec(
-            select(FormAnswer).where(FormAnswer.field_id.in_(field_ids))
-        )
-        answers = answers_result.all()
+        from sqlalchemy import text
 
-        # Group answers by field_id
+        # Query 1: Total answer counts for each field
+        count_result = await session.execute(
+            text("""
+                SELECT field_id, COUNT(*) as total_cnt
+                FROM form_answers
+                WHERE field_id = ANY(:field_ids) AND value IS NOT NULL
+                GROUP BY field_id
+            """),
+            {"field_ids": field_ids}
+        )
+        total_counts = {row.field_id: row.total_cnt for row in count_result.fetchall()}
+
+        # Query 2: Option tallies for choice fields (groups text/array JSONB values)
+        tally_result = await session.execute(
+            text("""
+                SELECT field_id, val, COUNT(*) as cnt
+                FROM form_answers,
+                LATERAL (
+                    SELECT jsonb_array_elements_text(value) as val 
+                    WHERE jsonb_typeof(value) = 'array'
+                    UNION ALL
+                    SELECT value#>>'{}' 
+                    WHERE jsonb_typeof(value) != 'array' AND value IS NOT NULL
+                ) x
+                WHERE field_id = ANY(:field_ids)
+                GROUP BY field_id, val
+            """),
+            {"field_ids": field_ids}
+        )
+        
         from collections import defaultdict
-        answers_by_field: dict = defaultdict(list)
-        for ans in answers:
-            answers_by_field[ans.field_id].append(ans.value)
+        tallies: dict[UUID, dict[str, int]] = defaultdict(dict)
+        for row in tally_result.fetchall():
+            tallies[row.field_id][row.val] = row.cnt
 
         summary = []
         choice_types = {
@@ -408,20 +449,12 @@ class FormServices:
         }
 
         for field in sorted(form.fields, key=lambda f: f.order):
-            field_answers = answers_by_field.get(field.id, [])
             if field.type in choice_types:
-                tally: dict[str, int] = {}
-                for val in field_answers:
-                    if isinstance(val, list):
-                        for v in val:
-                            tally[v] = tally.get(v, 0) + 1
-                    elif isinstance(val, str):
-                        tally[val] = tally.get(val, 0) + 1
                 summary.append({
                     "field_id": field.id,
                     "label": field.label,
                     "type": field.type.value,
-                    "tally": tally,
+                    "tally": tallies.get(field.id, {}),
                     "text_count": None,
                 })
             else:
@@ -430,7 +463,7 @@ class FormServices:
                     "label": field.label,
                     "type": field.type.value,
                     "tally": None,
-                    "text_count": len(field_answers),
+                    "text_count": total_counts.get(field.id, 0),
                 })
 
         return summary
@@ -443,16 +476,15 @@ class FormServices:
         session: AsyncSession,
         field_ids_filter: Optional[list[UUID]] = None,
     ) -> str:
+        # Keep this for backward compatibility or direct calls
         form = await self._get_form_with_fields(form_id, user_id, session)
 
-        # Determine which fields to export
         if field_ids_filter:
             fields = [f for f in form.fields if f.id in set(field_ids_filter)]
             fields = sorted(fields, key=lambda f: f.order)
         else:
             fields = sorted(form.fields, key=lambda f: f.order)
 
-        # Load all responses + answers
         responses_result = await session.exec(
             select(FormResponse)
             .options(selectinload(FormResponse.answers))
@@ -464,11 +496,8 @@ class FormServices:
         output = io.StringIO()
         writer = csv.writer(output)
 
-        # Header row
         header = ["Response ID", "Submitted At"] + [f.label or f"Field {i+1}" for i, f in enumerate(fields)]
         writer.writerow(header)
-
-        field_id_set = {f.id: f for f in fields}
 
         for resp in responses:
             answers_map = {a.field_id: a.value for a in resp.answers}
@@ -483,6 +512,64 @@ class FormServices:
             writer.writerow(row)
 
         return output.getvalue()
+
+    async def export_responses_csv_generator(
+        self,
+        *,
+        form_id: UUID,
+        user_id: UUID,
+        session: AsyncSession,
+        field_ids_filter: Optional[list[UUID]] = None,
+    ):
+        form = await self._get_form_with_fields(form_id, user_id, session)
+
+        if field_ids_filter:
+            fields = [f for f in form.fields if f.id in set(field_ids_filter)]
+            fields = sorted(fields, key=lambda f: f.order)
+        else:
+            fields = sorted(form.fields, key=lambda f: f.order)
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+
+        header = ["Response ID", "Submitted At"] + [f.label or f"Field {i+1}" for i, f in enumerate(fields)]
+        writer.writerow(header)
+        yield output.getvalue()
+        output.seek(0)
+        output.truncate(0)
+
+        batch_size = 500
+        offset = 0
+        while True:
+            statement = (
+                select(FormResponse)
+                .options(selectinload(FormResponse.answers))
+                .where(FormResponse.form_id == form_id)
+                .order_by(FormResponse.submitted_at.asc())
+                .offset(offset)
+                .limit(batch_size)
+            )
+            result = await session.exec(statement)
+            responses = result.all()
+            if not responses:
+                break
+
+            for resp in responses:
+                answers_map = {a.field_id: a.value for a in resp.answers}
+                row = [str(resp.id), resp.submitted_at.isoformat()]
+                for field in fields:
+                    val = answers_map.get(field.id, "")
+                    if isinstance(val, list):
+                        val = "; ".join(str(v) for v in val)
+                    elif val is None:
+                        val = ""
+                    row.append(str(val))
+                writer.writerow(row)
+                yield output.getvalue()
+                output.seek(0)
+                output.truncate(0)
+
+            offset += batch_size
 
     # ── Public endpoints ──────────────────────────────────────────────────────
 
@@ -575,6 +662,20 @@ class FormServices:
         return errors
 
     async def submit_response(self, *, form_id: UUID, submission: SubmitResponseIn, session: AsyncSession) -> dict:
+        if submission.idempotency_key:
+            from src.redis import redis_client
+            import json
+            redis_key = f"form_sub_idempotency:{submission.idempotency_key}"
+            try:
+                cached_res = await redis_client.get(redis_key)
+                if cached_res:
+                    logger.info(f"Duplicate submission detected for key {submission.idempotency_key}")
+                    if isinstance(cached_res, bytes):
+                        cached_res = cached_res.decode("utf-8")
+                    return json.loads(cached_res)
+            except Exception as e:
+                logger.error(f"Redis error reading idempotency key: {e}")
+
         form = await session.exec(
             select(Form)
             .options(selectinload(Form.fields))
@@ -624,8 +725,19 @@ class FormServices:
                 session.add(new_answer)
 
             await session.commit()
+            
+            res_data = {"detail": "Response submitted successfully"}
+            if submission.idempotency_key:
+                from src.redis import redis_client
+                import json
+                redis_key = f"form_sub_idempotency:{submission.idempotency_key}"
+                try:
+                    await redis_client.setex(name=redis_key, time=86400, value=json.dumps(res_data)) # 24h TTL
+                except Exception as e:
+                    logger.error(f"Redis error writing idempotency key: {e}")
+
             logger.info(f"Submitted response {new_response.id} for form {form_id}")
-            return {"detail": "Response submitted successfully"}
+            return res_data
         except Exception as e:
             await session.rollback()
             logger.error(f"Error submitting response for form {form_id}: {e}")
