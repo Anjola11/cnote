@@ -45,6 +45,7 @@ const FIELD_TYPE_LABELS: Record<FormFieldType, string> = {
   multiple_choice_multi: 'Multiple Choice (Multi)',
   email: 'Email',
   phone: 'Phone',
+  date: 'Date',
 };
 
 const FIELD_TYPE_ICONS: Record<FormFieldType, string> = {
@@ -54,6 +55,7 @@ const FIELD_TYPE_ICONS: Record<FormFieldType, string> = {
   multiple_choice_multi: 'fa-solid fa-square-check',
   email: 'fa-solid fa-envelope',
   phone: 'fa-solid fa-phone',
+  date: 'fa-solid fa-calendar',
 };
 
 const CHOICE_TYPES = new Set<FormFieldType>(['multiple_choice_single', 'multiple_choice_multi']);
@@ -224,6 +226,79 @@ function SortableFieldCard({
             </div>
           )}
 
+          {/* Options for date type */}
+          {field.type === 'date' && (
+            <div className="field-card__row">
+              <label className="field-card__label">Date Configuration</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
+                <label className="field-card__toggle-row">
+                  <input
+                    type="checkbox"
+                    checked={field.date_config?.include_year !== false}
+                    onChange={(e) => {
+                      const include = e.target.checked;
+                      onEditField(field.id, {
+                        date_config: {
+                          include_year: include,
+                          min_date: include ? field.date_config?.min_date : undefined,
+                          max_date: include ? field.date_config?.max_date : undefined,
+                        }
+                      });
+                    }}
+                  />
+                  <span>Include Year</span>
+                </label>
+                
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <div style={{ flex: 1 }}>
+                    <label className="field-card__label" style={{ fontSize: '10px', textTransform: 'none' }}>Min Date</label>
+                    <input
+                      type={field.date_config?.include_year !== false ? 'date' : 'text'}
+                      placeholder={field.date_config?.include_year !== false ? '' : 'e.g. --01-01'}
+                      className="field-card__input"
+                      value={field.date_config?.min_date || ''}
+                      onChange={(e) => {
+                        let val = e.target.value;
+                        if (val && field.date_config?.include_year === false && !val.startsWith('--')) {
+                          if (val.match(/^\d{2}-\d{2}$/)) val = `--${val}`;
+                        }
+                        onEditField(field.id, {
+                          date_config: {
+                            include_year: field.date_config?.include_year !== false,
+                            min_date: val || undefined,
+                            max_date: field.date_config?.max_date,
+                          }
+                        });
+                      }}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label className="field-card__label" style={{ fontSize: '10px', textTransform: 'none' }}>Max Date (Defaults to Today)</label>
+                    <input
+                      type={field.date_config?.include_year !== false ? 'date' : 'text'}
+                      placeholder={field.date_config?.include_year !== false ? '' : 'e.g. --12-31'}
+                      className="field-card__input"
+                      value={field.date_config?.max_date || ''}
+                      onChange={(e) => {
+                        let val = e.target.value;
+                        if (val && field.date_config?.include_year === false && !val.startsWith('--')) {
+                          if (val.match(/^\d{2}-\d{2}$/)) val = `--${val}`;
+                        }
+                        onEditField(field.id, {
+                          date_config: {
+                            include_year: field.date_config?.include_year !== false,
+                            min_date: field.date_config?.min_date,
+                            max_date: val || undefined,
+                          }
+                        });
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Footer: required toggle + delete */}
           <div className="field-card__footer">
             <label className="field-card__toggle-row">
@@ -366,6 +441,7 @@ export default function FormBuilderPage() {
         is_required: false,
         options: isChoice ? DEFAULT_OPTIONS.slice() : undefined,
         allow_other: false,
+        date_config: type === 'date' ? { include_year: true } : undefined,
       },
       {
         onSuccess: serverField => {

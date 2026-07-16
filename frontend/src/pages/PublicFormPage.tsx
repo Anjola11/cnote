@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { publicFormsApi } from '../services/formsApi';
 import type { AnswerIn, AnswerValue, FormField, PublicForm } from '../types/forms';
+import DatePicker from '../components/ui/DatePicker';
 import './PublicFormPage.css';
 
 // ─── Field Renderers ──────────────────────────────────────────────────────────
@@ -101,6 +102,18 @@ function FieldRenderer({ field, value, onChange, error }: FieldProps) {
           value={value}
           onChange={onChange}
           error={error}
+        />
+      );
+
+    case 'date':
+      return (
+        <DatePicker
+          includeYear={field.date_config?.include_year !== false}
+          minDate={field.date_config?.min_date}
+          maxDate={field.date_config?.max_date}
+          value={(value as string) || ''}
+          onChange={onChange}
+          error={!!error}
         />
       );
 
@@ -366,11 +379,28 @@ export default function PublicFormPage() {
   const pageStyle = getPageStyle(form);
 
   if (submitted) {
+    const signupUrl = `${window.location.origin}/signup`;
     return (
       <div className="pf-shell" style={pageStyle}>
         <div className="pf-state-card pf-state-card--success">
-          <i className="fa-solid fa-circle-check pf-state-card__icon pf-state-card__icon--success" />
-          <h1 className="pf-state-card__title">Thanks, your response has been recorded.</h1>
+          <div className="pf-success-icon-wrap">
+            <i className="fa-solid fa-check" />
+          </div>
+          <h1 className="pf-state-card__title">Thank you!</h1>
+          <p className="pf-state-card__sub" style={{ margin: 0 }}>Your response has been successfully recorded.</p>
+          
+          <div className="pf-cta-divider" />
+          
+          <div className="pf-cta-section">
+            <h2 className="pf-cta-title">Create your own forms with Cnote</h2>
+            <p className="pf-cta-desc">
+              CNote lets you build beautiful forms, share documents, and collect responses for free.
+            </p>
+            <a href={signupUrl} className="pf-cta-button">
+              Get Started for Free
+              <i className="fa-solid fa-arrow-right" />
+            </a>
+          </div>
         </div>
       </div>
     );

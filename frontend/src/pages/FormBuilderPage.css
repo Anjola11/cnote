@@ -226,6 +226,10 @@
   padding: 4px;
   border-radius: 4px;
   flex-shrink: 0;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 .field-card__drag-handle:hover {
   background: var(--bg-secondary);

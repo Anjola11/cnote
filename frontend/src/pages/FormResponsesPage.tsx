@@ -308,8 +308,33 @@ export default function FormResponsesPage() {
     return ans.value;
   };
 
-  const renderDisplayValue = (_field: FormField, value: any) => {
+  const formatHumanDate = (val: string): string => {
+    if (!val) return '';
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    if (val.startsWith('--')) {
+      const m = parseInt(val.slice(2, 4), 10);
+      const d = parseInt(val.slice(5, 7), 10);
+      if (isNaN(m) || isNaN(d) || m < 1 || m > 12) return val;
+      return `${months[m - 1]} ${d}`;
+    } else {
+      const parts = val.split('-');
+      if (parts.length !== 3) return val;
+      const y = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10);
+      const d = parseInt(parts[2], 10);
+      if (isNaN(y) || isNaN(m) || isNaN(d) || m < 1 || m > 12) return val;
+      return `${months[m - 1]} ${d}, ${y}`;
+    }
+  };
+
+  const renderDisplayValue = (field: FormField, value: any) => {
     if (value == null) return <span className="responses-table__empty">—</span>;
+    if (field.type === 'date') {
+      return formatHumanDate(String(value));
+    }
     if (Array.isArray(value)) {
       return value.join(', ');
     }

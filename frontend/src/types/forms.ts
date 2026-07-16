@@ -6,7 +6,8 @@ export type FormFieldType =
   | 'multiple_choice_single'
   | 'multiple_choice_multi'
   | 'email'
-  | 'phone';
+  | 'phone'
+  | 'date';
 
 export interface FormBackgroundConfig {
   type: 'color' | 'image' | 'gradient';
@@ -23,6 +24,11 @@ export interface FormField {
   is_required: boolean;
   options: string[] | null;
   allow_other: boolean;
+  date_config?: {
+    include_year: boolean;
+    min_date?: string;
+    max_date?: string;
+  } | null;
 }
 
 export interface FormListItem {
