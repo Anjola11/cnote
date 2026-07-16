@@ -232,8 +232,8 @@ export function useAutoSave(
   // Block in-app navigation if we have unsaved content
   const blocker = useBlocker(
     useCallback(
-      ({ nextLocation, currentValue }) => {
-        return enabled && queuedContent.current !== null && !isConflict.current && nextLocation.pathname !== currentValue.pathname;
+      ({ nextLocation, currentLocation }) => {
+        return enabled && queuedContent.current !== null && !isConflict.current && nextLocation.pathname !== currentLocation.pathname;
       },
       [enabled]
     )

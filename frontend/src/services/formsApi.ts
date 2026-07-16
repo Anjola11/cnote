@@ -65,7 +65,7 @@ export const formsApi = {
     api.get<{ data: ResponseSummaryField[] }>(`/forms/${formId}/responses/summary`).then(r => r.data.data),
 
   getExportUrl: (formId: string, fields?: string[]) => {
-    const base = `${getBaseURL()}/forms/${formId}/responses/export`;
+    const base = `${api.defaults.baseURL}/forms/${formId}/responses/export`;
     if (fields && fields.length > 0) return `${base}?fields=${fields.join(',')}`;
     return base;
   },

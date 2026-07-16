@@ -24,6 +24,7 @@ export interface Note extends NoteListItem {
   share_token?: string;
   display_name?: string;
   avatar_url?: string;
+  version: number;
 }
 
 export interface User {
