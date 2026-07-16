@@ -25,6 +25,7 @@ class FormFieldType(str, Enum):
     MULTIPLE_CHOICE_MULTI = "multiple_choice_multi"
     EMAIL = "email"
     PHONE = "phone"
+    DATE = "date"
 
 
 class Form(SQLModel, table=True):
@@ -100,6 +101,10 @@ class FormField(SQLModel, table=True):
         sa_column=Column(pg.JSONB),
     )
     allow_other: bool = Field(default=False)
+    date_config: Optional[dict] = Field(
+        default=None,
+        sa_column=Column(pg.JSONB, nullable=True),
+    )
 
     form: Optional[Form] = Relationship(back_populates="fields")
     answers: List["FormAnswer"] = Relationship(

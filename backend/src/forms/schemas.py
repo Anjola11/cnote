@@ -9,6 +9,12 @@ from src.forms.models import FormFieldType, FormLayoutType
 
 # ─── Field Schemas ───────────────────────────────────────────────────────────
 
+class DateFieldConfig(BaseModel):
+    include_year: bool = True
+    min_date: Optional[str] = None
+    max_date: Optional[str] = None
+
+
 class FormFieldCreate(BaseModel):
     type: FormFieldType
     label: str = ""
@@ -16,6 +22,7 @@ class FormFieldCreate(BaseModel):
     options: Optional[list[str]] = None
     allow_other: bool = False
     page: int = 0
+    date_config: Optional[DateFieldConfig] = None
 
 
 class FormFieldUpdate(BaseModel):
@@ -25,6 +32,7 @@ class FormFieldUpdate(BaseModel):
     allow_other: Optional[bool] = None
     page: Optional[int] = None
     type: Optional[FormFieldType] = None
+    date_config: Optional[DateFieldConfig] = None
 
 
 class FormFieldOut(BaseModel):
@@ -39,6 +47,7 @@ class FormFieldOut(BaseModel):
     is_required: bool
     options: Optional[list[str]] = None
     allow_other: bool
+    date_config: Optional[DateFieldConfig] = None
 
 
 class FieldReorderBody(BaseModel):

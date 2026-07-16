@@ -1,7 +1,7 @@
 import csv
 import io
 import re
-from typing import Optional
+from typing import Any, Optional
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -12,6 +12,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from src.forms.models import Form, FormAnswer, FormField, FormFieldType, FormResponse
 from src.forms.schemas import (
     AnswerIn,
+    DateFieldConfig,
     FormCreate,
     FormFieldCreate,
     FormFieldUpdate,
@@ -25,6 +26,35 @@ from src.utils.utc_now import utc_now
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 # Permissive phone: digits, spaces, hyphens, parens, +
 _PHONE_RE = re.compile(r"^[\d\s\-().+]{7,20}$")
+
+
+def _format_human_date(val: str) -> str:
+    if not val:
+        return ""
+    months = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    ]
+    if val.startswith("--"):
+        try:
+            m = int(val[2:4])
+            d = int(val[5:7])
+            if 1 <= m <= 12:
+                return f"{months[m - 1]} {d}"
+        except ValueError:
+            pass
+    else:
+        parts = val.split("-")
+        if len(parts) == 3:
+            try:
+                y = int(parts[0])
+                m = int(parts[1])
+                d = int(parts[2])
+                if 1 <= m <= 12:
+                    return f"{months[m - 1]} {d}, {y}"
+            except ValueError:
+                pass
+    return val
 
 
 class FormServices:
@@ -253,6 +283,41 @@ class FormServices:
 
     # ── Field CRUD ────────────────────────────────────────────────────────────
 
+    def _validate_date_config(self, type_val: Any, date_config: Optional[dict]) -> None:
+        if type_val != FormFieldType.DATE or not date_config:
+            return
+        
+        include_year = date_config.get("include_year", True)
+        min_date = date_config.get("min_date")
+        max_date = date_config.get("max_date")
+
+        import re
+        full_date_re = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+        no_year_re = re.compile(r"^--\d{2}-\d{2}$")
+
+        if include_year:
+            if min_date and not full_date_re.match(min_date):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="min_date must match YYYY-MM-DD format when include_year is true"
+                )
+            if max_date and not full_date_re.match(max_date):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="max_date must match YYYY-MM-DD format when include_year is true"
+                )
+        else:
+            if min_date and not no_year_re.match(min_date):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="min_date must match --MM-DD format when include_year is false"
+                )
+            if max_date and not no_year_re.match(max_date):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="max_date must match --MM-DD format when include_year is false"
+                )
+
     async def create_field(self, *, form_id: UUID, user_id: UUID, field_input: FormFieldCreate, session: AsyncSession) -> FormField:
         form = await self._get_form(form_id, user_id, session)
 
@@ -261,6 +326,9 @@ class FormServices:
             select(func.count(FormField.id)).where(FormField.form_id == form.id)
         )
         field_count = count_result.one()
+
+        config_dict = field_input.date_config.model_dump() if field_input.date_config else None
+        self._validate_date_config(field_input.type, config_dict)
 
         new_field = FormField(
             form_id=form.id,
@@ -271,6 +339,7 @@ class FormServices:
             is_required=field_input.is_required,
             options=field_input.options,
             allow_other=field_input.allow_other,
+            date_config=config_dict,
         )
 
         try:
@@ -294,6 +363,28 @@ class FormServices:
         field = await self._get_field(field_id, form_id, session)
 
         update_data = field_update.model_dump(exclude_unset=True)
+
+        merged_type = update_data.get("type", field.type)
+        if "date_config" in update_data:
+            new_config = field_update.date_config
+            if new_config is not None:
+                if not isinstance(new_config, DateFieldConfig):
+                    raise TypeError(f"Expected DateFieldConfig, got {type(new_config)}")
+                # Merge incoming config with existing config using Pydantic models
+                existing_config = DateFieldConfig(**(field.date_config or {}))
+                incoming_config_data = new_config.model_dump(exclude_unset=True)
+                merged_config = existing_config.model_copy(update=incoming_config_data)
+                
+                # Update our update_data dictionary
+                update_data["date_config"] = merged_config.model_dump()
+                merged_config_dict = update_data["date_config"]
+            else:
+                update_data["date_config"] = None
+                merged_config_dict = None
+        else:
+            merged_config_dict = field.date_config
+
+        self._validate_date_config(merged_type, merged_config_dict)
         
         if "type" in update_data and update_data["type"] != field.type:
             from sqlmodel import select, func
@@ -563,6 +654,8 @@ class FormServices:
                         val = "; ".join(str(v) for v in val)
                     elif val is None:
                         val = ""
+                    elif field.type == FormFieldType.DATE and val:
+                        val = _format_human_date(str(val))
                     row.append(str(val))
                 writer.writerow(row)
                 yield output.getvalue()
@@ -635,6 +728,59 @@ class FormServices:
                 if not _PHONE_RE.match(str(val).strip()):
                     errors.append({"field_id": str(field.id), "error": "Please enter a valid phone number."})
 
+            elif field.type == FormFieldType.DATE:
+                # Value is string (YYYY-MM-DD or --MM-DD)
+                include_year = True
+                min_date = None
+                max_date = None
+                if field.date_config:
+                    include_year = field.date_config.get("include_year", True)
+                    min_date = field.date_config.get("min_date")
+                    max_date = field.date_config.get("max_date")
+
+                import re
+                from datetime import datetime, timezone, timedelta
+
+                full_date_re = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+                no_year_re = re.compile(r"^--\d{2}-\d{2}$")
+
+                if include_year:
+                    if not isinstance(val, str) or not full_date_re.match(val):
+                        errors.append({"field_id": str(field.id), "error": "Invalid date format. Expected YYYY-MM-DD."})
+                        continue
+                    try:
+                        parsed_date = datetime.strptime(val, "%Y-%m-%d")
+                    except ValueError:
+                        errors.append({"field_id": str(field.id), "error": "Invalid date value."})
+                        continue
+
+                    if min_date and val < min_date:
+                        errors.append({"field_id": str(field.id), "error": f"Date must not be before {min_date}."})
+
+                    if max_date:
+                        if val > max_date:
+                            errors.append({"field_id": str(field.id), "error": f"Date must not be after {max_date}."})
+                    else:
+                        # Default max: today + 1 day grace buffer for timezone safety
+                        tomorrow_utc = (datetime.now(timezone.utc) + timedelta(days=1)).strftime("%Y-%m-%d")
+                        if val > tomorrow_utc:
+                            errors.append({"field_id": str(field.id), "error": "Date cannot be in the future."})
+                else:
+                    if not isinstance(val, str) or not no_year_re.match(val):
+                        errors.append({"field_id": str(field.id), "error": "Invalid date format. Expected --MM-DD."})
+                        continue
+                    try:
+                        # Prepend leap year 2000 to support Feb 29
+                        parsed_date = datetime.strptime(f"2000-{val[2:]}", "%Y-%m-%d")
+                    except ValueError:
+                        errors.append({"field_id": str(field.id), "error": "Invalid date value."})
+                        continue
+
+                    if min_date and val < min_date:
+                        errors.append({"field_id": str(field.id), "error": f"Date must not be before {min_date[2:]}."})
+                    if max_date and val > max_date:
+                        errors.append({"field_id": str(field.id), "error": f"Date must not be after {max_date[2:]}."})
+
             elif field.type == FormFieldType.MULTIPLE_CHOICE_SINGLE:
                 valid_opts = set(field.options or [])
                 submitted = str(val)
@@ -663,7 +809,7 @@ class FormServices:
 
     async def submit_response(self, *, form_id: UUID, submission: SubmitResponseIn, session: AsyncSession) -> dict:
         if submission.idempotency_key:
-            from src.redis import redis_client
+            from src.db.redis import redis_client
             import json
             redis_key = f"form_sub_idempotency:{submission.idempotency_key}"
             try:
@@ -728,7 +874,7 @@ class FormServices:
             
             res_data = {"detail": "Response submitted successfully"}
             if submission.idempotency_key:
-                from src.redis import redis_client
+                from src.db.redis import redis_client
                 import json
                 redis_key = f"form_sub_idempotency:{submission.idempotency_key}"
                 try:
