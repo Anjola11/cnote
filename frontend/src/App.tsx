@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -18,6 +18,8 @@ import FormResponsesPage from './pages/FormResponsesPage';
 import PublicFormPage from './pages/PublicFormPage';
 import CnoteLoader from './components/ui/CnoteLoader';
 import { Toaster } from 'react-hot-toast';
+import { HelmetProvider } from 'react-helmet-async';
+import { LoaderProvider } from './context/LoaderContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -36,29 +38,22 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function AppRoutes() {
-  return (
-    <Routes>
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/signup" element={<SignupPage />} />
-      <Route path="/verify" element={<VerifyOtpPage />} />
-      <Route path="/feed" element={<RequireAuth><FeedPage /></RequireAuth>} />
-      <Route path="/bin" element={<RequireAuth><BinPage /></RequireAuth>} />
-      <Route path="/editor/:id" element={<RequireAuth><EditorPage /></RequireAuth>} />
-      <Route path="/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
-      <Route path="/forms" element={<RequireAuth><FormsListPage /></RequireAuth>} />
-      <Route path="/forms/:id/edit" element={<RequireAuth><FormBuilderPage /></RequireAuth>} />
-      <Route path="/forms/:id/responses" element={<RequireAuth><FormResponsesPage /></RequireAuth>} />
-      <Route path="/public/note/:shareToken" element={<PublicNotePage />} />
-      <Route path="/public/forms/:id" element={<PublicFormPage />} />
-      <Route path="*" element={<NotFoundPage />} />
-    </Routes>
-  );
-}
-
-import { HelmetProvider } from 'react-helmet-async';
-import { LoaderProvider } from './context/LoaderContext';
+const router = createBrowserRouter([
+  { path: '/', element: <LandingPage /> },
+  { path: '/login', element: <LoginPage /> },
+  { path: '/signup', element: <SignupPage /> },
+  { path: '/verify', element: <VerifyOtpPage /> },
+  { path: '/feed', element: <RequireAuth><FeedPage /></RequireAuth> },
+  { path: '/bin', element: <RequireAuth><BinPage /></RequireAuth> },
+  { path: '/editor/:id', element: <RequireAuth><EditorPage /></RequireAuth> },
+  { path: '/profile', element: <RequireAuth><ProfilePage /></RequireAuth> },
+  { path: '/forms', element: <RequireAuth><FormsListPage /></RequireAuth> },
+  { path: '/forms/:id/edit', element: <RequireAuth><FormBuilderPage /></RequireAuth> },
+  { path: '/forms/:id/responses', element: <RequireAuth><FormResponsesPage /></RequireAuth> },
+  { path: '/public/note/:shareToken', element: <PublicNotePage /> },
+  { path: '/public/forms/:id', element: <PublicFormPage /> },
+  { path: '*', element: <NotFoundPage /> },
+]);
 
 export default function App() {
   return (
@@ -67,10 +62,8 @@ export default function App() {
         <AuthProvider>
           <LoaderProvider>
             <ThemeProvider>
-              <BrowserRouter>
-                <Toaster position="top-center" toastOptions={{ style: { background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border)' } }} />
-                <AppRoutes />
-              </BrowserRouter>
+              <Toaster position="top-center" toastOptions={{ style: { background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border)' } }} />
+              <RouterProvider router={router} />
             </ThemeProvider>
           </LoaderProvider>
         </AuthProvider>

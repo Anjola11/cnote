@@ -120,3 +120,6 @@ Thumbs.db
 *.tmp
 
 frontend_instruction.md
+
+# Codebase Maps
+.codebase-maps/

@@ -209,6 +209,7 @@ export default function FormResponsesPage() {
   const [tab, setTab] = useState<Tab>('table');
   const [showExportModal, setShowExportModal] = useState(false);
   const [selectedFields, setSelectedFields] = useState<Set<string>>(new Set());
+  const [isExporting, setIsExporting] = useState(false);
 
   // Response select and delete states
   const [selectedResponseIds, setSelectedResponseIds] = useState<Set<string>>(new Set());
@@ -226,16 +227,29 @@ export default function FormResponsesPage() {
     setShowExportModal(true);
   };
 
-  const handleDownloadCSV = () => {
+  const handleDownloadCSV = async () => {
     const filter = selectedFields.size === allFieldIds.size
       ? []
       : Array.from(selectedFields);
-    const url = formsApi.getExportUrl(id!, filter);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `form-${id}-responses.csv`;
-    a.click();
-    setShowExportModal(false);
+    try {
+      setIsExporting(true);
+      const blob = await formsApi.exportResponsesCsv(id!, filter);
+      const blobUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      const cleanTitle = form?.title ? form.title.toLowerCase().replace(/[^a-z0-9_-]/g, '_') : id;
+      a.download = `form-${cleanTitle}-responses.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(blobUrl);
+      setShowExportModal(false);
+      toast.success('Responses exported successfully');
+    } catch {
+      toast.error('Failed to export responses. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleSingleDelete = () => {
@@ -699,12 +713,13 @@ export default function FormResponsesPage() {
               ))}
             </div>
             <div className="export-modal__actions">
-              <Button variant="ghost" onClick={() => setShowExportModal(false)}>Cancel</Button>
+              <Button variant="ghost" onClick={() => setShowExportModal(false)} disabled={isExporting}>Cancel</Button>
               <Button
                 variant="primary"
                 icon="fa-solid fa-download"
                 onClick={handleDownloadCSV}
-                disabled={selectedFields.size === 0}
+                disabled={selectedFields.size === 0 || isExporting}
+                loading={isExporting}
               >
                 Download
               </Button>

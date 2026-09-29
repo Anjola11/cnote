@@ -1,10 +1,16 @@
-import { useState } from 'react';
+import { useState, useLayoutEffect, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { publicFormsApi } from '../services/formsApi';
 import type { AnswerIn, AnswerValue, FormField, PublicForm } from '../types/forms';
 import DatePicker from '../components/ui/DatePicker';
+import { gsap } from 'gsap';
+import toast from 'react-hot-toast';
 import './PublicFormPage.css';
+
+// Validation regex constants mirrored from backend/src/forms/services.py
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+const PHONE_RE = /^[\d\s\-().+]{7,20}$/;
 
 // ─── Field Renderers ──────────────────────────────────────────────────────────
 
@@ -272,6 +278,43 @@ export default function PublicFormPage() {
   const [submitError, setSubmitError] = useState('');
   const [submissionIdempotencyKey] = useState(() => crypto.randomUUID());
 
+  // Transition and animation hooks
+  const [direction, setDirection] = useState<'forward' | 'backward'>('forward');
+  const pageContainerRef = useRef<HTMLDivElement>(null);
+
+  // 1. GSAP directional page transitions
+  useLayoutEffect(() => {
+    if (!form || !pageContainerRef.current) return;
+    const startX = direction === 'forward' ? 40 : -40;
+    
+    gsap.fromTo(
+      pageContainerRef.current,
+      { x: startX, opacity: 0 },
+      { x: 0, opacity: 1, duration: 0.25, ease: 'power2.out', clearProps: 'all' }
+    );
+  }, [currentPage, form]);
+
+  // 2. GSAP shake effect on fields with errors
+  useEffect(() => {
+    if (!form) return;
+    const errorFieldIds = Object.keys(errors);
+    if (errorFieldIds.length > 0) {
+      errorFieldIds.forEach(fid => {
+        const el = document.getElementById(`field-${fid}`)?.closest('.pf-question-card');
+        if (el) {
+          const tl = gsap.timeline();
+          tl.to(el, { x: -6, duration: 0.05 })
+            .to(el, { x: 6, duration: 0.05 })
+            .to(el, { x: -4, duration: 0.05 })
+            .to(el, { x: 4, duration: 0.05 })
+            .to(el, { x: -2, duration: 0.05 })
+            .to(el, { x: 2, duration: 0.05 })
+            .to(el, { x: 0, duration: 0.05, clearProps: 'x' });
+        }
+      });
+    }
+  }, [errors, form]);
+
   if (isLoading) {
     return (
       <div className="pf-shell pf-shell--loading">
@@ -306,11 +349,11 @@ export default function PublicFormPage() {
   const isMultiPage = form.layout_type === 'multi_page';
   const fieldsByPage: Record<number, FormField[]> = {};
   form.fields.forEach(f => {
-    const pg = isMultiPage ? f.page : 0;
+    const pg = isMultiPage ? (f.page ?? 0) : 0;
     if (!fieldsByPage[pg]) fieldsByPage[pg] = [];
     fieldsByPage[pg].push(f);
   });
-  const pages = Object.keys(fieldsByPage).map(Number).sort();
+  const pages = Object.keys(fieldsByPage).map(Number).sort((a, b) => a - b);
   const totalPages = isMultiPage ? pages.length : 1;
   const currentPageFields = isMultiPage
     ? (fieldsByPage[pages[currentPage]] || [])
@@ -322,25 +365,56 @@ export default function PublicFormPage() {
   };
 
   const validatePage = (fields: FormField[]): boolean => {
-    const newErrors: Record<string, string> = {};
+    const newErrors = { ...errors };
+    let isValid = true;
+
+    // Clear previous errors for only the fields being validated
+    for (const f of fields) {
+      delete newErrors[f.id];
+    }
+
     for (const field of fields) {
-      if (!field.is_required) continue;
       const val = answers[field.id];
-      if (val == null || (typeof val === 'string' && !val.trim()) || (Array.isArray(val) && val.length === 0)) {
-        newErrors[field.id] = 'This field is required.';
+
+      // required checks
+      if (field.is_required) {
+        if (val == null || (typeof val === 'string' && !val.trim()) || (Array.isArray(val) && val.length === 0)) {
+          newErrors[field.id] = 'This field is required.';
+          isValid = false;
+          continue;
+        }
+      }
+
+      if (val == null || (typeof val === 'string' && !val.trim())) {
+        continue;
+      }
+
+      // email checks (mirrors backend/src/forms/services.py email regex)
+      if (field.type === 'email' && !EMAIL_RE.test(String(val))) {
+        newErrors[field.id] = 'Please enter a valid email address.';
+        isValid = false;
+      }
+
+      // phone checks (mirrors backend/src/forms/services.py phone regex)
+      if (field.type === 'phone' && !PHONE_RE.test(String(val).trim())) {
+        newErrors[field.id] = 'Please enter a valid phone number.';
+        isValid = false;
       }
     }
+
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return isValid;
   };
 
   const handleNext = () => {
     if (!validatePage(currentPageFields)) return;
+    setDirection('forward');
     setCurrentPage(p => p + 1);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleBack = () => {
+    setDirection('backward');
     setCurrentPage(p => p - 1);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -359,15 +433,38 @@ export default function PublicFormPage() {
       setSubmitted(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
-      const detail = err?.response?.data?.detail;
-      if (typeof detail === 'string') {
-        setSubmitError(detail);
-      } else if (detail?.errors) {
+      // NOTE: CNote's global exception handler wraps exception messages under a custom "message" field
+      // instead of standard FastAPI "detail". We read from message first, with a fallback to detail.
+      const errorContainer = err?.response?.data?.message || err?.response?.data?.detail;
+      
+      if (typeof errorContainer === 'string') {
+        setSubmitError(errorContainer);
+      } else if (errorContainer?.errors && Array.isArray(errorContainer.errors)) {
         const apiErrors: Record<string, string> = {};
-        for (const e of detail.errors) {
+        let redirectPageIdx: number | null = null;
+
+        for (const e of errorContainer.errors) {
           apiErrors[e.field_id] = e.error;
+
+          if (redirectPageIdx === null) {
+            const errField = form.fields.find(f => f.id === e.field_id);
+            if (errField && isMultiPage) {
+              const targetPageIdx = pages.indexOf(errField.page);
+              if (targetPageIdx !== -1 && targetPageIdx !== currentPage) {
+                redirectPageIdx = targetPageIdx;
+              }
+            }
+          }
         }
+        
         setErrors(apiErrors);
+        
+        // Auto-navigate to the page containing the errored field
+        if (redirectPageIdx !== null) {
+          setDirection(redirectPageIdx > currentPage ? 'forward' : 'backward');
+          setCurrentPage(redirectPageIdx);
+          toast.error('Please correct errors on this page.');
+        }
       } else {
         setSubmitError('Something went wrong. Please try again.');
       }
@@ -438,25 +535,27 @@ export default function PublicFormPage() {
         )}
 
         {/* Fields */}
-        {currentPageFields.map(field => (
-          <div key={field.id} className="pf-card pf-question-card">
-            <label className="pf-question-label" htmlFor={`field-${field.id}`}>
-              {field.label || 'Untitled Question'}
-              {field.is_required && <span className="pf-required" aria-label="required"> *</span>}
-            </label>
-            <FieldRenderer
-              field={field}
-              value={answers[field.id] ?? null}
-              onChange={val => updateAnswer(field.id, val)}
-              error={errors[field.id]}
-            />
-            {errors[field.id] && (
-              <p className="pf-field-error">
-                <i className="fa-solid fa-circle-exclamation" /> {errors[field.id]}
-              </p>
-            )}
-          </div>
-        ))}
+        <div ref={pageContainerRef} className="pf-fields-container">
+          {currentPageFields.map(field => (
+            <div key={field.id} className="pf-card pf-question-card">
+              <label className="pf-question-label" htmlFor={`field-${field.id}`}>
+                {field.label || 'Untitled Question'}
+                {field.is_required && <span className="pf-required" aria-label="required"> *</span>}
+              </label>
+              <FieldRenderer
+                field={field}
+                value={answers[field.id] ?? null}
+                onChange={val => updateAnswer(field.id, val)}
+                error={errors[field.id]}
+              />
+              {errors[field.id] && (
+                <p className="pf-field-error">
+                  <i className="fa-solid fa-circle-exclamation" /> {errors[field.id]}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
 
         {/* Submit error */}
         {submitError && (

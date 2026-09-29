@@ -8,6 +8,7 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  useDroppable,
   type DragEndEvent,
 } from '@dnd-kit/core';
 import {
@@ -358,6 +359,28 @@ function OptionRow({ value, index, onCommit, onRemove }: OptionRowProps) {
   );
 }
 
+// ─── Droppable Page Container Helper ──────────────────────────────────────────
+
+interface PageContainerProps {
+  pageNum: number;
+  children: React.ReactNode;
+}
+
+function PageContainer({ pageNum, children }: PageContainerProps) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `page-container-${pageNum}`,
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`page-container ${isOver ? 'page-container--over' : ''}`}
+    >
+      {children}
+    </div>
+  );
+}
+
 // ─── Main Builder Page ────────────────────────────────────────────────────────
 
 export default function FormBuilderPage() {
@@ -407,20 +430,86 @@ export default function FormBuilderPage() {
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { active, over } = event;
-      if (!over || active.id === over.id || !form) return;
+      if (!over || !form) return;
 
-      const fields = [...(form.fields ?? [])].sort((a, b) => a.order - b.order);
-      const oldIdx = fields.findIndex(f => f.id === active.id);
-      const newIdx = fields.findIndex(f => f.id === over.id);
-      if (oldIdx === -1 || newIdx === -1) return;
+      const activeId = active.id as string;
+      const overId = over.id as string;
 
-      const reordered = arrayMove(fields, oldIdx, newIdx);
-      reorderFields.mutate(reordered.map(f => f.id));
+      // Find the dragged field
+      const draggedField = form.fields.find(f => f.id === activeId);
+      if (!draggedField) return;
+
+      let targetPage = draggedField.page ?? 0;
+
+      // Case 1: Dropped over another field
+      const overField = form.fields.find(f => f.id === overId);
+      if (overField) {
+        targetPage = overField.page ?? 0;
+        
+        // Find fields on the target page, sorted by order
+        const targetPageFields = [...form.fields]
+          .filter(f => (f.page ?? 0) === targetPage)
+          .sort((a, b) => a.order - b.order);
+        
+        const oldIdx = targetPageFields.findIndex(f => f.id === activeId);
+        const newIdx = targetPageFields.findIndex(f => f.id === overId);
+        
+        if ((draggedField.page ?? 0) === targetPage) {
+          // Same page: standard reorder
+          if (oldIdx !== -1 && newIdx !== -1) {
+            const reordered = arrayMove(targetPageFields, oldIdx, newIdx);
+            const finalFields = [...form.fields];
+            reordered.forEach((f, idx) => {
+              const original = finalFields.find(x => x.id === f.id);
+              if (original) original.order = idx;
+            });
+            reorderFields.mutate(finalFields.sort((a, b) => a.order - b.order).map(f => f.id));
+          }
+        } else {
+          // Different page: update page and insert at position
+          const updatedTargetFields = [...targetPageFields];
+          if (newIdx !== -1) {
+            updatedTargetFields.splice(newIdx, 0, draggedField);
+          } else {
+            updatedTargetFields.push(draggedField);
+          }
+
+          updateField.mutate({ fieldId: activeId, data: { page: targetPage } });
+
+          const finalFields = [...form.fields];
+          const memoryField = finalFields.find(f => f.id === activeId);
+          if (memoryField) memoryField.page = targetPage;
+
+          updatedTargetFields.forEach((f, idx) => {
+            const original = finalFields.find(x => x.id === f.id);
+            if (original) original.order = idx;
+          });
+
+          reorderFields.mutate(finalFields.sort((a, b) => a.order - b.order).map(f => f.id));
+        }
+      } 
+      // Case 2: Dropped over an empty page container
+      else if (overId.startsWith('page-container-')) {
+        const pageNum = parseInt(overId.replace('page-container-', ''), 10);
+        if (isNaN(pageNum)) return;
+
+        updateField.mutate({ fieldId: activeId, data: { page: pageNum } });
+
+        const finalFields = [...form.fields];
+        const memoryField = finalFields.find(f => f.id === activeId);
+        if (memoryField) {
+          memoryField.page = pageNum;
+          const pageFields = finalFields.filter(f => (f.page ?? 0) === pageNum && f.id !== activeId);
+          memoryField.order = pageFields.length;
+        }
+
+        reorderFields.mutate(finalFields.sort((a, b) => a.order - b.order).map(f => f.id));
+      }
     },
-    [form, reorderFields]
+    [form, reorderFields, updateField]
   );
 
-  const handleAddField = (type: FormFieldType) => {
+  const handleAddField = (type: FormFieldType, pageNum: number = 0) => {
     const isChoice = CHOICE_TYPES.has(type);
     const tempId = `temp-${crypto.randomUUID()}`;
 
@@ -441,6 +530,7 @@ export default function FormBuilderPage() {
         is_required: false,
         options: isChoice ? DEFAULT_OPTIONS.slice() : undefined,
         allow_other: false,
+        page: pageNum,
         date_config: type === 'date' ? { include_year: true } : undefined,
       },
       {
@@ -529,6 +619,32 @@ export default function FormBuilderPage() {
     descTimer.current = setTimeout(() => updateForm.mutate({ description: val }), 450);
   };
 
+  const isMultiPage = form?.layout_type === 'multi_page';
+
+  const handleDeletePage = (pageNum: number) => {
+    if (!form) return;
+    const finalFields = [...form.fields];
+    const targetPage = pageNum > 0 ? pageNum - 1 : 0;
+    
+    finalFields.forEach(f => {
+      const fieldPage = f.page ?? 0;
+      if (fieldPage === pageNum) {
+        updateField.mutate({ fieldId: f.id, data: { page: targetPage } });
+      } else if (fieldPage > pageNum) {
+        updateField.mutate({ fieldId: f.id, data: { page: fieldPage - 1 } });
+      }
+    });
+    
+    queryClient.invalidateQueries({ queryKey: ['form', id!] });
+    toast.success(`Page ${pageNum + 1} deleted.`);
+  };
+
+  const handleAddPage = () => {
+    if (!form) return;
+    const maxPage = form.fields.length > 0 ? Math.max(...form.fields.map(f => f.page ?? 0)) : -1;
+    handleAddField('short_answer', maxPage + 1);
+  };
+
   const shareUrl = form ? `${window.location.origin}/public/forms/${form.id}` : '';
   const handleCopyLink = () => {
     navigator.clipboard.writeText(shareUrl).then(() => toast.success('Link copied!'));
@@ -609,46 +725,133 @@ export default function FormBuilderPage() {
 
             {/* Field list with drag-and-drop */}
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <SortableContext items={sortedFields.map(f => f.id)} strategy={verticalListSortingStrategy}>
-                <div className="form-fields-list">
-                  {sortedFields.map(field => (
-                    <SortableFieldCard
-                      key={field.id}
-                      field={field}
-                      isExpanded={expandedFieldId === field.id}
-                      onToggle={() => setExpandedFieldId(expandedFieldId === field.id ? null : field.id)}
-                      onEditField={handleEditField}
-                      onDeleteField={handleDeleteField}
-                    />
-                  ))}
-                </div>
-              </SortableContext>
-            </DndContext>
+              {isMultiPage ? (
+                <div className="form-pages-container">
+                  {(() => {
+                    const fieldsByPage: Record<number, FormField[]> = {};
+                    form.fields.forEach(f => {
+                      const pg = f.page ?? 0;
+                      if (!fieldsByPage[pg]) fieldsByPage[pg] = [];
+                      fieldsByPage[pg].push(f);
+                    });
+                    
+                    const pageNumbers = Object.keys(fieldsByPage).map(Number).sort((a, b) => a - b);
+                    if (pageNumbers.length === 0 || pageNumbers[0] !== 0) {
+                      pageNumbers.unshift(0);
+                      if (!fieldsByPage[0]) fieldsByPage[0] = [];
+                    }
 
-            {sortedFields.length === 0 && (
-              <div className="form-builder-empty">
-                <i className="fa-solid fa-circle-plus" />
-                <p>Add your first question below</p>
-              </div>
-            )}
+                    return pageNumbers.map(pageNum => {
+                      const pageFields = sortedFields.filter(f => (f.page ?? 0) === pageNum);
+                      return (
+                        <div key={pageNum} className="form-builder-page-section form-builder-page-section--is-multi">
+                          <div className="form-builder-page-header">
+                            <span className="form-builder-page-title">
+                              <i className="fa-solid fa-file-lines" /> Page {pageNum + 1}
+                            </span>
+                            {pageNumbers.length > 1 && (
+                              <button
+                                className="form-builder-page-btn form-builder-page-btn--danger"
+                                onClick={() => handleDeletePage(pageNum)}
+                                title="Delete page (moves fields to preceding page)"
+                              >
+                                Delete Page
+                              </button>
+                            )}
+                          </div>
 
-            {/* Add field buttons */}
-            <div className="form-add-field">
-              <span className="form-add-field__label">Add question</span>
-              <div className="form-add-field__btns">
-                {(Object.keys(FIELD_TYPE_LABELS) as FormFieldType[]).map(type => (
-                  <button
-                    key={type}
-                    className="form-add-field__btn"
-                    onClick={() => handleAddField(type)}
-                    title={FIELD_TYPE_LABELS[type]}
-                  >
-                    <i className={FIELD_TYPE_ICONS[type]} />
-                    <span>{FIELD_TYPE_LABELS[type]}</span>
+                          <PageContainer pageNum={pageNum}>
+                            <SortableContext items={pageFields.map(f => f.id)} strategy={verticalListSortingStrategy}>
+                              <div className="form-fields-list">
+                                {pageFields.map(field => (
+                                  <SortableFieldCard
+                                    key={field.id}
+                                    field={field}
+                                    isExpanded={expandedFieldId === field.id}
+                                    onToggle={() => setExpandedFieldId(expandedFieldId === field.id ? null : field.id)}
+                                    onEditField={handleEditField}
+                                    onDeleteField={handleDeleteField}
+                                  />
+                                ))}
+                                {pageFields.length === 0 && (
+                                  <div className="form-builder-empty" style={{ padding: '20px' }}>
+                                    <p style={{ fontSize: '12px' }}>Drag questions here or add one below</p>
+                                  </div>
+                                )}
+                              </div>
+                            </SortableContext>
+                          </PageContainer>
+
+                          {/* Add field buttons specific to this page */}
+                          <div className="form-add-field" style={{ marginTop: '8px' }}>
+                            <span className="form-add-field__label">Add question to Page {pageNum + 1}</span>
+                            <div className="form-add-field__btns">
+                              {(Object.keys(FIELD_TYPE_LABELS) as FormFieldType[]).map(type => (
+                                <button
+                                  key={type}
+                                  className="form-add-field__btn"
+                                  onClick={() => handleAddField(type, pageNum)}
+                                  title={FIELD_TYPE_LABELS[type]}
+                                >
+                                  <i className={FIELD_TYPE_ICONS[type]} />
+                                  <span>{FIELD_TYPE_LABELS[type]}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+
+                  <button className="form-builder-add-page" onClick={handleAddPage}>
+                    <i className="fa-solid fa-plus" /> Add New Page
                   </button>
-                ))}
-              </div>
-            </div>
+                </div>
+              ) : (
+                <>
+                  <SortableContext items={sortedFields.map(f => f.id)} strategy={verticalListSortingStrategy}>
+                    <div className="form-fields-list">
+                      {sortedFields.map(field => (
+                        <SortableFieldCard
+                          key={field.id}
+                          field={field}
+                          isExpanded={expandedFieldId === field.id}
+                          onToggle={() => setExpandedFieldId(expandedFieldId === field.id ? null : field.id)}
+                          onEditField={handleEditField}
+                          onDeleteField={handleDeleteField}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+
+                  {sortedFields.length === 0 && (
+                    <div className="form-builder-empty">
+                      <i className="fa-solid fa-circle-plus" />
+                      <p>Add your first question below</p>
+                    </div>
+                  )}
+
+                  {/* Add field buttons */}
+                  <div className="form-add-field">
+                    <span className="form-add-field__label">Add question</span>
+                    <div className="form-add-field__btns">
+                      {(Object.keys(FIELD_TYPE_LABELS) as FormFieldType[]).map(type => (
+                        <button
+                          key={type}
+                          className="form-add-field__btn"
+                          onClick={() => handleAddField(type, 0)}
+                          title={FIELD_TYPE_LABELS[type]}
+                        >
+                          <i className={FIELD_TYPE_ICONS[type]} />
+                          <span>{FIELD_TYPE_LABELS[type]}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </DndContext>
           </div>
 
           {/* Settings sidebar */}

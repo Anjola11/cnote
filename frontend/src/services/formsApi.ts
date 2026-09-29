@@ -70,6 +70,15 @@ export const formsApi = {
     return base;
   },
 
+  exportResponsesCsv: async (formId: string, fields?: string[]): Promise<Blob> => {
+    const params = fields && fields.length > 0 ? { fields: fields.join(',') } : undefined;
+    const response = await api.get(`/forms/${formId}/responses/export`, {
+      params,
+      responseType: 'blob',
+    });
+    return response.data as Blob;
+  },
+
   // ── Logo upload ──────────────────────────────────────────────────────────
   uploadLogo: (formId: string, file: File) => {
     const form = new FormData();

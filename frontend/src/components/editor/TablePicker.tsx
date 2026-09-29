@@ -173,7 +173,7 @@ export default function TablePicker({ editor, onClose }: TablePickerProps) {
           {isGridMode ? (
             <i className="fa-solid fa-sliders" />
           ) : (
-            <i className="fa-solid fa-grid" />
+            <i className="fa-solid fa-table-cells" />
           )}
         </button>
       </div>

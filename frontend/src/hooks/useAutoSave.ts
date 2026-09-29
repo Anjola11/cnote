@@ -4,6 +4,7 @@ import { usePatchNote } from './useNotes';
 import { set } from 'idb-keyval';
 import { useBlocker } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import api from '../services/api';
 
 const getHash = (obj: any) => JSON.stringify(obj);
 
@@ -245,27 +246,28 @@ export function useAutoSave(
       flush()
         .then(() => {
           toast.success('Changes saved successfully', { id: toastId });
-          blocker.proceed();
+          blocker.proceed?.();
         })
         .catch(err => {
           console.error('Failed to save content on navigation:', err);
           toast.error('Failed to save changes. Navigating anyway...', { id: toastId });
           queuedContent.current = null;
-          blocker.proceed();
+          blocker.proceed?.();
         });
     }
-  }, [blocker.state, blocker.proceed, flush]);
+  }, [blocker.state, flush]);
 
   // Handle navigation away and tab closures
   useEffect(() => {
     const handleExit = (e?: BeforeUnloadEvent) => {
       if (!queuedContent.current) return;
 
-      const blob = new Blob([JSON.stringify({ content: queuedContent.current })], { 
+      const blob = new Blob([JSON.stringify({ content: queuedContent.current, version: serverVersion.current })], { 
         type: 'application/json' 
       });
       
-      const success = navigator.sendBeacon(`/api/v1/notes/${noteId}/beacon`, blob);
+      const beaconUrl = `${api.defaults.baseURL}/notes/${noteId}/beacon`;
+      const success = navigator.sendBeacon(beaconUrl, blob);
       
       if (success) {
         queuedContent.current = null; // Mark as handled

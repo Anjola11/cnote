@@ -88,16 +88,16 @@ export default function TableBubbleMenu({ editor }: TableBubbleMenuProps) {
       onMouseDown={(e) => e.preventDefault()}
     >
       {/* Column ops */}
-      <MenuBtn icon="fa-solid fa-table-columns" label="Add column before" onClick={() => run(() => editor.chain().focus().addColumnBefore().run())} />
-      <MenuBtn icon="fa-solid fa-table-columns" label="Add column after"  onClick={() => run(() => editor.chain().focus().addColumnAfter().run())} />
-      <MenuBtn icon="fa-solid fa-table-columns" label="Delete column"     onClick={() => run(() => editor.chain().focus().deleteColumn().run())} danger />
+      <MenuBtn icon="fa-solid fa-arrow-left" label="Insert column left" onClick={() => run(() => editor.chain().focus().addColumnBefore().run())} />
+      <MenuBtn icon="fa-solid fa-arrow-right" label="Insert column right" onClick={() => run(() => editor.chain().focus().addColumnAfter().run())} />
+      <MenuBtn icon="fa-solid fa-xmark" label="Delete column" onClick={() => run(() => editor.chain().focus().deleteColumn().run())} danger />
 
       <Divider />
 
       {/* Row ops */}
-      <MenuBtn icon="fa-solid fa-table-list" label="Add row above" onClick={() => run(() => editor.chain().focus().addRowBefore().run())} />
-      <MenuBtn icon="fa-solid fa-table-list" label="Add row below" onClick={() => run(() => editor.chain().focus().addRowAfter().run())} />
-      <MenuBtn icon="fa-solid fa-table-list" label="Delete row"    onClick={() => run(() => editor.chain().focus().deleteRow().run())} danger />
+      <MenuBtn icon="fa-solid fa-arrow-up" label="Insert row above" onClick={() => run(() => editor.chain().focus().addRowBefore().run())} />
+      <MenuBtn icon="fa-solid fa-arrow-down" label="Insert row below" onClick={() => run(() => editor.chain().focus().addRowAfter().run())} />
+      <MenuBtn icon="fa-solid fa-minus" label="Delete row" onClick={() => run(() => editor.chain().focus().deleteRow().run())} danger />
 
       <Divider />
 
