@@ -611,6 +611,9 @@ class FormServices:
         user_id: UUID,
         session: AsyncSession,
         field_ids_filter: Optional[list[UUID]] = None,
+        include_index: bool = True,
+        include_id: bool = False,
+        include_timestamp: bool = True,
     ):
         form = await self._get_form_with_fields(form_id, user_id, session)
 
@@ -623,7 +626,15 @@ class FormServices:
         output = io.StringIO()
         writer = csv.writer(output)
 
-        header = ["Response ID", "Submitted At"] + [f.label or f"Field {i+1}" for i, f in enumerate(fields)]
+        header = []
+        if include_index:
+            header.append("#")
+        if include_id:
+            header.append("Response ID")
+        if include_timestamp:
+            header.append("Submitted At")
+        header.extend([f.label or f"Field {i+1}" for i, f in enumerate(fields)])
+
         writer.writerow(header)
         yield output.getvalue()
         output.seek(0)
@@ -631,6 +642,8 @@ class FormServices:
 
         batch_size = 500
         offset = 0
+        row_counter = 0
+
         while True:
             statement = (
                 select(FormResponse)
@@ -646,8 +659,19 @@ class FormServices:
                 break
 
             for resp in responses:
+                row_counter += 1
                 answers_map = {a.field_id: a.value for a in resp.answers}
-                row = [str(resp.id), resp.submitted_at.isoformat()]
+                row = []
+                if include_index:
+                    row.append(str(row_counter))
+                if include_id:
+                    row.append(str(resp.id))
+                if include_timestamp:
+                    try:
+                        row.append(resp.submitted_at.strftime("%Y-%m-%d %H:%M:%S"))
+                    except Exception:
+                        row.append(resp.submitted_at.isoformat())
+
                 for field in fields:
                     val = answers_map.get(field.id, "")
                     if isinstance(val, list):
@@ -656,7 +680,15 @@ class FormServices:
                         val = ""
                     elif field.type == FormFieldType.DATE and val:
                         val = _format_human_date(str(val))
-                    row.append(str(val))
+                    else:
+                        val = str(val)
+
+                    # Escape phone numbers and long numeric strings to prevent Excel scientific notation (e.g. 2.34091E+13)
+                    clean_num = val.lstrip('+').strip()
+                    if clean_num.isdigit() and len(clean_num) >= 10:
+                        val = f'="{val}"'
+
+                    row.append(val)
                 writer.writerow(row)
                 yield output.getvalue()
                 output.seek(0)

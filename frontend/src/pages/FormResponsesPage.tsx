@@ -15,6 +15,7 @@ import Navbar from '../components/layout/Navbar';
 import DesktopSidebar from '../components/layout/DesktopSidebar';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
+import DocxExportModal from '../components/forms/DocxExportModal';
 import {
   useForm,
   useFormResponses,
@@ -208,8 +209,15 @@ export default function FormResponsesPage() {
 
   const [tab, setTab] = useState<Tab>('table');
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showDocxModal, setShowDocxModal] = useState(false);
   const [selectedFields, setSelectedFields] = useState<Set<string>>(new Set());
   const [isExporting, setIsExporting] = useState(false);
+
+  // CSV export options
+  const [csvFileName, setCsvFileName] = useState('');
+  const [csvIncludeIndex, setCsvIncludeIndex] = useState(true);
+  const [csvIncludeId, setCsvIncludeId] = useState(false);
+  const [csvIncludeTimestamp, setCsvIncludeTimestamp] = useState(true);
 
   // Response select and delete states
   const [selectedResponseIds, setSelectedResponseIds] = useState<Set<string>>(new Set());
@@ -224,21 +232,38 @@ export default function FormResponsesPage() {
 
   const handleExportOpen = () => {
     setSelectedFields(new Set(sortedFields.map(f => f.id)));
+    const cleanTitle = form?.title
+      ? form.title.toLowerCase().replace(/[^a-z0-9_-]/g, '_').slice(0, 40)
+      : (id || 'responses');
+    setCsvFileName(`${cleanTitle}-responses`);
+    setCsvIncludeIndex(true);
+    setCsvIncludeId(false);
+    setCsvIncludeTimestamp(true);
     setShowExportModal(true);
   };
 
   const handleDownloadCSV = async () => {
+    if (selectedFields.size === 0 && !csvIncludeIndex && !csvIncludeId && !csvIncludeTimestamp) {
+      toast.error('Please select at least one column to export.');
+      return;
+    }
     const filter = selectedFields.size === allFieldIds.size
       ? []
       : Array.from(selectedFields);
     try {
       setIsExporting(true);
-      const blob = await formsApi.exportResponsesCsv(id!, filter);
+      const cleanFileBase = (csvFileName.trim() || 'responses').replace(/[^a-zA-Z0-9_-]/g, '_');
+      const blob = await formsApi.exportResponsesCsv(id!, {
+        fields: filter,
+        includeIndex: csvIncludeIndex,
+        includeId: csvIncludeId,
+        includeTimestamp: csvIncludeTimestamp,
+        filename: `${cleanFileBase}.csv`,
+      });
       const blobUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = blobUrl;
-      const cleanTitle = form?.title ? form.title.toLowerCase().replace(/[^a-z0-9_-]/g, '_') : id;
-      a.download = `form-${cleanTitle}-responses.csv`;
+      a.download = `${cleanFileBase}.csv`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -381,9 +406,15 @@ export default function FormResponsesPage() {
               </span>
             </div>
           </div>
-          <Button variant="secondary" icon="fa-solid fa-download" onClick={handleExportOpen}>
-            Download CSV
-          </Button>
+          <div className="responses-header__actions">
+            <Button variant="secondary" icon="fa-solid fa-file-csv" onClick={handleExportOpen}>
+              CSV
+            </Button>
+            <Button variant="primary" icon="fa-solid fa-file-word" onClick={() => setShowDocxModal(true)}>
+              <span className="responses-btn-label--full">Export Word (.docx)</span>
+              <span className="responses-btn-label--short">Word (.docx)</span>
+            </Button>
+          </div>
         </div>
 
         {/* Tab switcher */}
@@ -691,41 +722,142 @@ export default function FormResponsesPage() {
         <div className="export-modal-overlay" onClick={() => setShowExportModal(false)}>
           <div className="export-modal" onClick={e => e.stopPropagation()}>
             <div className="export-modal__header">
-              <h2>Select columns to export</h2>
+              <div className="export-modal__header-title">
+                <i className="fa-solid fa-file-csv" style={{ color: '#10b981', fontSize: '18px' }} />
+                <h2>Export Responses to CSV</h2>
+              </div>
               <button className="export-modal__close" onClick={() => setShowExportModal(false)}>
                 <i className="fa-solid fa-xmark" />
               </button>
             </div>
-            <div className="export-modal__fields">
-              {sortedFields.map(f => (
-                <label key={f.id} className="export-modal__field-row">
+
+            <div className="export-modal__content">
+              {/* Filename */}
+              <div className="export-modal__group">
+                <label className="export-modal__group-label">Export File Name</label>
+                <div className="export-modal__filename-wrap">
                   <input
-                    type="checkbox"
-                    checked={selectedFields.has(f.id)}
-                    onChange={e => {
-                      const next = new Set(selectedFields);
-                      e.target.checked ? next.add(f.id) : next.delete(f.id);
-                      setSelectedFields(next);
-                    }}
+                    type="text"
+                    className="export-modal__filename-input"
+                    value={csvFileName}
+                    onChange={e => setCsvFileName(e.target.value)}
+                    placeholder="responses-export"
                   />
-                  {f.label || 'Untitled'}
-                </label>
-              ))}
+                  <span className="export-modal__filename-ext">.csv</span>
+                </div>
+              </div>
+
+              {/* System Columns */}
+              <div className="export-modal__group">
+                <span className="export-modal__group-label">System Columns</span>
+                <div className="export-modal__fields-box">
+                  <label className="export-modal__field-row">
+                    <input
+                      type="checkbox"
+                      checked={csvIncludeIndex}
+                      onChange={e => setCsvIncludeIndex(e.target.checked)}
+                    />
+                    <span># Row Number (1, 2, 3...)</span>
+                  </label>
+                  <label className="export-modal__field-row">
+                    <input
+                      type="checkbox"
+                      checked={csvIncludeTimestamp}
+                      onChange={e => setCsvIncludeTimestamp(e.target.checked)}
+                    />
+                    <span>Submission Date & Time</span>
+                  </label>
+                  <label className="export-modal__field-row">
+                    <input
+                      type="checkbox"
+                      checked={csvIncludeId}
+                      onChange={e => setCsvIncludeId(e.target.checked)}
+                    />
+                    <span>Submission ID (UUID)</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Form Fields */}
+              <div className="export-modal__group">
+                <div className="export-modal__group-label-row">
+                  <span className="export-modal__group-label">
+                    Form Fields ({selectedFields.size}/{sortedFields.length})
+                  </span>
+                  <button
+                    type="button"
+                    className="export-modal__link-btn"
+                    onClick={() => {
+                      if (selectedFields.size === allFieldIds.size) {
+                        setSelectedFields(new Set());
+                      } else {
+                        setSelectedFields(new Set(allFieldIds));
+                      }
+                    }}
+                  >
+                    {selectedFields.size === allFieldIds.size ? 'Deselect All' : 'Select All'}
+                  </button>
+                </div>
+                <div className="export-modal__fields-box export-modal__fields-box--scroll">
+                  {sortedFields.map(f => (
+                    <label key={f.id} className="export-modal__field-row">
+                      <input
+                        type="checkbox"
+                        checked={selectedFields.has(f.id)}
+                        onChange={e => {
+                          const next = new Set(selectedFields);
+                          e.target.checked ? next.add(f.id) : next.delete(f.id);
+                          setSelectedFields(next);
+                        }}
+                      />
+                      <span>{f.label || 'Untitled'}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="export-modal__switch-hint">
+              <button
+                type="button"
+                className="export-modal__switch-btn"
+                onClick={() => {
+                  setShowExportModal(false);
+                  setShowDocxModal(true);
+                }}
+              >
+                <i className="fa-solid fa-file-word" /> Switch to Word (.docx) export with A4 Preview →
+              </button>
             </div>
             <div className="export-modal__actions">
-              <Button variant="ghost" onClick={() => setShowExportModal(false)} disabled={isExporting}>Cancel</Button>
+              <Button variant="ghost" onClick={() => setShowExportModal(false)} disabled={isExporting}>
+                Cancel
+              </Button>
               <Button
                 variant="primary"
                 icon="fa-solid fa-download"
                 onClick={handleDownloadCSV}
-                disabled={selectedFields.size === 0 || isExporting}
+                disabled={
+                  (selectedFields.size === 0 && !csvIncludeIndex && !csvIncludeId && !csvIncludeTimestamp) ||
+                  isExporting
+                }
                 loading={isExporting}
               >
-                Download
+                Download CSV
               </Button>
             </div>
           </div>
         </div>
+      )}
+
+      {/* DOCX Export & Live A4 Preview Modal */}
+      {form && (
+        <DocxExportModal
+          isOpen={showDocxModal}
+          onClose={() => setShowDocxModal(false)}
+          form={form}
+          responses={responses || []}
+        />
       )}
     </div>
   );

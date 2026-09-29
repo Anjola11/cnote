@@ -70,8 +70,40 @@ export const formsApi = {
     return base;
   },
 
-  exportResponsesCsv: async (formId: string, fields?: string[]): Promise<Blob> => {
-    const params = fields && fields.length > 0 ? { fields: fields.join(',') } : undefined;
+  exportResponsesCsv: async (
+    formId: string,
+    optionsOrFields?: string[] | {
+      fields?: string[];
+      includeIndex?: boolean;
+      includeId?: boolean;
+      includeTimestamp?: boolean;
+      filename?: string;
+    }
+  ): Promise<Blob> => {
+    const params: Record<string, any> = {};
+
+    if (Array.isArray(optionsOrFields)) {
+      if (optionsOrFields.length > 0) {
+        params.fields = optionsOrFields.join(',');
+      }
+    } else if (optionsOrFields) {
+      if (optionsOrFields.fields && optionsOrFields.fields.length > 0) {
+        params.fields = optionsOrFields.fields.join(',');
+      }
+      if (optionsOrFields.includeIndex !== undefined) {
+        params.include_index = optionsOrFields.includeIndex;
+      }
+      if (optionsOrFields.includeId !== undefined) {
+        params.include_id = optionsOrFields.includeId;
+      }
+      if (optionsOrFields.includeTimestamp !== undefined) {
+        params.include_timestamp = optionsOrFields.includeTimestamp;
+      }
+      if (optionsOrFields.filename) {
+        params.filename = optionsOrFields.filename;
+      }
+    }
+
     const response = await api.get(`/forms/${formId}/responses/export`, {
       params,
       responseType: 'blob',

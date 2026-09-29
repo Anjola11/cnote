@@ -1,4 +1,5 @@
 from uuid import UUID
+import re
 
 from fastapi import APIRouter, Depends, Query, Request, Response, status
 from fastapi.responses import StreamingResponse
@@ -244,6 +245,10 @@ async def export_responses_csv(
     request: Request,
     form_id: UUID,
     fields: str = Query(default="", description="Comma-separated field UUIDs to include"),
+    include_index: bool = Query(default=True, description="Include row number (#) column"),
+    include_id: bool = Query(default=False, description="Include Response ID UUID column"),
+    include_timestamp: bool = Query(default=True, description="Include Submitted At column"),
+    filename: str = Query(default="", description="Optional custom filename without extension"),
     user_id=Depends(get_verified_user_id),
     session: AsyncSession = Depends(get_session),
     form_services: FormServices = Depends(get_form_services),
@@ -261,12 +266,20 @@ async def export_responses_csv(
         user_id=user_id,
         session=session,
         field_ids_filter=field_ids_filter,
+        include_index=include_index,
+        include_id=include_id,
+        include_timestamp=include_timestamp,
     )
+
+    clean_name = filename.strip() or f"form-{form_id}-responses"
+    if clean_name.lower().endswith(".csv"):
+        clean_name = clean_name[:-4]
+    clean_name = re.sub(r'[^a-zA-Z0-9_\-]', '_', clean_name)
 
     return StreamingResponse(
         csv_generator,
-        media_type="text/csv",
-        headers={"Content-Disposition": f'attachment; filename="form-{form_id}-responses.csv"'},
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{clean_name}.csv"'},
     )
 
 

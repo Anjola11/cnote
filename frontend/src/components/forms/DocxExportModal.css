@@ -1,0 +1,753 @@
+/* ── DOCX Export Modal & A4 Sheet Preview ── */
+
+.docx-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+  animation: docxModalFadeIn 0.2s ease-out;
+}
+
+@keyframes docxModalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.docx-modal {
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 1300px;
+  height: 90vh;
+  max-height: 900px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  animation: docxModalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes docxModalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ── Modal Header ── */
+.docx-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  background: var(--bg-card, #ffffff);
+}
+
+.docx-modal__header-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.docx-modal__word-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #2b579a; /* Microsoft Word Blue */
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  box-shadow: 0 4px 10px rgba(43, 87, 154, 0.3);
+}
+
+.docx-modal__title-text h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-primary, #0f172a);
+}
+
+.docx-modal__title-text p {
+  margin: 2px 0 0 0;
+  font-size: 13px;
+  color: var(--text-secondary, #64748b);
+}
+
+.docx-modal__close-btn {
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  color: var(--text-secondary, #64748b);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+}
+
+.docx-modal__close-btn:hover {
+  background: var(--bg-secondary, #f1f5f9);
+  color: var(--text-primary, #0f172a);
+}
+
+/* ── Modal Body (Split: Sidebar Controls + A4 Stage) ── */
+.docx-modal__body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  min-height: 0;
+  background: var(--bg-secondary, #f8fafc);
+}
+
+/* ── Sidebar Controls ── */
+.docx-modal__sidebar {
+  background: var(--bg-card, #ffffff);
+  border-right: 1px solid var(--border, #e2e8f0);
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.docx-control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.docx-control-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary, #64748b);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Filename Input */
+.docx-filename-input-wrap {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border, #cbd5e1);
+  border-radius: 8px;
+  background: var(--bg-card, #ffffff);
+  overflow: hidden;
+  transition: all 0.15s ease;
+}
+
+.docx-filename-input-wrap:focus-within {
+  border-color: #2b579a;
+  box-shadow: 0 0 0 3px rgba(43, 87, 154, 0.15);
+}
+
+.docx-filename-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--text-primary, #0f172a);
+  outline: none;
+  min-width: 0;
+}
+
+.docx-filename-ext {
+  padding: 8px 12px;
+  background: var(--bg-secondary, #f1f5f9);
+  color: var(--text-secondary, #64748b);
+  font-size: 12px;
+  font-weight: 600;
+  border-left: 1px solid var(--border, #e2e8f0);
+  user-select: none;
+}
+
+/* Orientation segmented control */
+.docx-orientation-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  background: var(--bg-secondary, #f1f5f9);
+  padding: 4px;
+  border-radius: 10px;
+}
+
+.docx-orientation-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary, #64748b);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.docx-orientation-btn:hover {
+  color: var(--text-primary, #0f172a);
+}
+
+.docx-orientation-btn--active {
+  background: var(--bg-card, #ffffff);
+  color: var(--accent, #3b82f6);
+  border-color: rgba(59, 130, 246, 0.2);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+/* Paper icon indicator */
+.docx-paper-icon {
+  border: 1.5px solid currentColor;
+  border-radius: 2px;
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.docx-paper-icon--portrait {
+  width: 14px;
+  height: 20px;
+}
+
+.docx-paper-icon--landscape {
+  width: 20px;
+  height: 14px;
+}
+
+.docx-help-text {
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--text-secondary, #64748b);
+  margin-top: 2px;
+}
+
+/* Margin pills */
+.docx-pill-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.docx-pill-btn {
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid var(--border, #e2e8f0);
+  background: var(--bg-card, #ffffff);
+  color: var(--text-secondary, #64748b);
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s ease;
+}
+
+.docx-pill-btn--active {
+  border-color: var(--accent, #3b82f6);
+  background: rgba(59, 130, 246, 0.08);
+  color: var(--accent, #3b82f6);
+  font-weight: 600;
+}
+
+/* Checkbox lists */
+.docx-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.docx-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  color: var(--text-primary, #0f172a);
+  cursor: pointer;
+  user-select: none;
+}
+
+.docx-checkbox-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  accent-color: var(--accent, #3b82f6);
+  cursor: pointer;
+}
+
+/* Column selector section */
+.docx-columns-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.docx-columns-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+}
+
+.docx-link-btn {
+  background: none;
+  border: none;
+  color: var(--accent, #3b82f6);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.docx-link-btn:hover {
+  text-decoration: underline;
+}
+
+.docx-columns-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 6px 4px 6px 0;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  background: var(--bg-secondary, #f8fafc);
+  padding: 8px 10px;
+}
+
+/* ── A4 Preview Stage ── */
+.docx-stage {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: #cbd5e1; /* Realistic neutral desk surface */
+  overflow: hidden;
+}
+
+.docx-stage__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: var(--bg-card, #ffffff);
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  z-index: 10;
+}
+
+.docx-stage__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--text-primary, #0f172a);
+}
+
+.docx-stage__zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.docx-zoom-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 6px;
+  background: var(--bg-card, #ffffff);
+  color: var(--text-primary, #0f172a);
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.15s ease;
+}
+
+.docx-zoom-btn:hover {
+  background: var(--bg-secondary, #f1f5f9);
+}
+
+.docx-zoom-btn--reset {
+  width: auto;
+  padding: 0 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+/* ── Paper Viewport & Scroll ── */
+.docx-viewport {
+  flex: 1;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+  padding: 24px;
+  background: #cbd5e1;
+  position: relative;
+}
+
+.docx-canvas {
+  display: inline-block;
+  min-width: min-content;
+  transform-origin: top left;
+  transition: transform 0.08s ease-out;
+}
+
+@media (min-width: 1025px) {
+  .docx-canvas {
+    margin: 0 auto;
+    width: fit-content;
+    display: block;
+  }
+}
+
+/* ── Realistic A4 Sheet Component ── */
+.docx-a4-sheet {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow:
+    0 10px 25px -5px rgba(0, 0, 0, 0.15),
+    0 8px 10px -6px rgba(0, 0, 0, 0.1),
+    0 0 0 1px rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  margin-bottom: 24px;
+}
+
+/* Standard A4 dimensions scaled for on-screen legibility */
+.docx-a4-sheet--portrait {
+  width: 720px;
+  min-height: 960px;
+  padding: 40px 44px;
+}
+
+.docx-a4-sheet--landscape {
+  width: 1040px;
+  min-height: 700px;
+  padding: 34px 40px;
+}
+
+.docx-a4-sheet--compact {
+  padding: 22px 26px !important;
+}
+
+/* A4 Sheet Content */
+.docx-sheet__header {
+  border-bottom: 2px solid #0f172a;
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+.docx-sheet__title {
+  margin: 0 0 4px 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.docx-sheet__desc {
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  color: #475569;
+  font-style: italic;
+}
+
+.docx-sheet__meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 10.5px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* ── Sheet Native Table ── */
+.docx-sheet__table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.docx-sheet__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  line-height: 1.4;
+  table-layout: auto;
+  min-width: 100%;
+}
+
+.docx-sheet__table th,
+.docx-sheet__table td {
+  border: 1px solid #cbd5e1;
+  padding: 6px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.docx-sheet__table th {
+  background: #f1f5f9;
+  color: #0f172a;
+  font-weight: 700;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.docx-sheet__table tr:nth-child(even) td {
+  background: #f8fafc;
+}
+
+.docx-sheet__table tr:hover td {
+  background: #f1f5f9;
+}
+
+.docx-sheet__table td {
+  color: #334155;
+  font-size: 10.5px;
+  white-space: nowrap;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.docx-sheet__footer {
+  margin-top: 24px;
+  padding-top: 10px;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+/* ── Modal Footer Actions ── */
+.docx-modal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  border-top: 1px solid var(--border, #e2e8f0);
+  background: var(--bg-card, #ffffff);
+  flex-shrink: 0;
+}
+
+.docx-modal__footer-info {
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+}
+
+.docx-modal__footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.docx-download-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  background: #2b579a;
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 4px 10px rgba(43, 87, 154, 0.25);
+  white-space: nowrap;
+}
+
+.docx-download-btn:hover:not(:disabled) {
+  background: #1e3f6f;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(43, 87, 154, 0.35);
+}
+
+.docx-download-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Mobile Tab Switcher (Hidden on Desktop) ── */
+.docx-modal__mobile-tabs {
+  display: none;
+}
+
+/* ── Responsive Adaptations ── */
+@media (max-width: 840px) {
+  .docx-modal {
+    height: 94vh;
+    max-height: 94vh;
+    border-radius: 14px;
+    padding: 0;
+    margin: 8px;
+  }
+
+  .docx-modal__header {
+    padding: 12px 16px;
+  }
+
+  .docx-modal__word-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+
+  .docx-modal__title-text h2 {
+    font-size: 15px;
+    line-height: 1.25;
+  }
+
+  .docx-modal__title-text p {
+    font-size: 11.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 220px;
+  }
+
+  /* Segmented Mobile Tab Switcher */
+  .docx-modal__mobile-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    background: var(--bg-card, #ffffff);
+    border-bottom: 1px solid var(--border, #e2e8f0);
+    padding: 6px 12px;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .docx-mobile-tab-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: var(--bg-secondary, #f1f5f9);
+    color: var(--text-secondary, #64748b);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .docx-mobile-tab-btn--active {
+    background: #2b579a;
+    color: #ffffff;
+    box-shadow: 0 2px 6px rgba(43, 87, 154, 0.25);
+  }
+
+  .docx-modal__body {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .docx-modal__sidebar {
+    display: none;
+    flex: 1;
+    width: 100%;
+    border-right: none;
+    padding: 16px;
+    overflow-y: auto;
+  }
+
+  .docx-modal__sidebar--active {
+    display: flex;
+  }
+
+  .docx-stage {
+    display: none;
+    flex: 1;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .docx-stage--active {
+    display: flex;
+  }
+
+  .docx-viewport {
+    padding: 16px 10px;
+    display: block;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+  }
+
+  .docx-canvas {
+    display: inline-block;
+    min-width: min-content;
+    margin: 0;
+  }
+
+  .docx-a4-sheet {
+    margin: 0 0 16px 0;
+    padding: 24px 18px;
+  }
+
+  .docx-a4-sheet--portrait {
+    width: 680px;
+    min-width: 680px;
+  }
+
+  .docx-a4-sheet--landscape {
+    width: 980px;
+    min-width: 980px;
+  }
+}
+
+@media (max-width: 640px) {
+  .docx-modal__footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px 16px;
+  }
+
+  .docx-modal__footer-info {
+    font-size: 11.5px;
+    text-align: center;
+  }
+
+  .docx-modal__footer-actions {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .docx-modal__footer-actions button {
+    justify-content: center;
+  }
+
+  .docx-download-btn {
+    font-size: 12.5px;
+    padding: 8px 12px;
+  }
+}
