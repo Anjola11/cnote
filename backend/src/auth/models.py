@@ -72,7 +72,8 @@ class User(SQLModel, table=True):
             crop="fill",
             gravity="face",
             quality="auto",
-            fetch_format="auto"
+            fetch_format="auto",
+            secure=True
         )
 
         return url

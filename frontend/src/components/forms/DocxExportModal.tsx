@@ -5,6 +5,7 @@ import Button from '../ui/Button';
 import { formsApi } from '../../services/formsApi';
 import { generateResponsesDocx, formatCellValue, type DocxExportOptions } from '../../utils/docxExport';
 import type { Form, FormResponseItem } from '../../types/forms';
+import DocxResponseOrderModal from './DocxResponseOrderModal';
 import './DocxExportModal.css';
 
 interface DocxExportModalProps {
@@ -21,9 +22,30 @@ export default function DocxExportModal({
   responses,
 }: DocxExportModalProps) {
   const [allResponses, setAllResponses] = useState<FormResponseItem[]>(responses);
+  const [orderedResponses, setOrderedResponses] = useState<FormResponseItem[]>(responses);
+  const [isOrderCustomized, setIsOrderCustomized] = useState(false);
+  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+
+  // Quick move inputs in the sidebar
+  const [sidebarFrom, setSidebarFrom] = useState('');
+  const [sidebarTo, setSidebarTo] = useState('');
+
+  // Preview pagination controls
+  const [previewPage, setPreviewPage] = useState(1);
+  const [previewPageSize, setPreviewPageSize] = useState<number>(20);
 
   useEffect(() => {
     setAllResponses(responses);
+    if (!isOrderCustomized) {
+      setOrderedResponses(responses);
+    } else {
+      setOrderedResponses(prev => {
+        const existingIds = new Set(prev.map(r => r.id));
+        const newItems = responses.filter(r => !existingIds.has(r.id));
+        return [...prev, ...newItems];
+      });
+    }
+
     let isMounted = true;
     async function fetchAllRemaining() {
       if (!form?.id || responses.length < 50) return;
@@ -39,6 +61,12 @@ export default function DocxExportModal({
         }
         if (isMounted) {
           setAllResponses(loaded);
+          setOrderedResponses(prev => {
+            if (!isOrderCustomized) return loaded;
+            const existingIds = new Set(prev.map(r => r.id));
+            const newItems = loaded.filter(r => !existingIds.has(r.id));
+            return [...prev, ...newItems];
+          });
         }
       } catch (err) {
         console.warn('Could not fetch remaining responses for export', err);
@@ -46,11 +74,27 @@ export default function DocxExportModal({
     }
     fetchAllRemaining();
     return () => { isMounted = false; };
-  }, [form?.id, responses]);
+  }, [form?.id, responses, isOrderCustomized]);
 
   const sortedFields = useMemo(() => {
     return form ? [...form.fields].sort((a, b) => a.order - b.order) : [];
   }, [form]);
+
+  // Map of initial 1-based index by response ID
+  const originalIndexMap = useMemo(() => {
+    const map = new Map<string, number>();
+    allResponses.forEach((res, i) => {
+      map.set(res.id, i + 1);
+    });
+    return map;
+  }, [allResponses]);
+
+  const hasCustomOrder = useMemo(() => {
+    if (orderedResponses.length !== allResponses.length) return false;
+    return orderedResponses.some((res, idx) => {
+      return originalIndexMap.get(res.id) !== idx + 1;
+    });
+  }, [orderedResponses, allResponses, originalIndexMap]);
 
   // Initial orientation: forms with 5 or more fields look much better in Landscape!
   const [orientation, setOrientation] = useState<'portrait' | 'landscape'>(() => {
@@ -143,8 +187,58 @@ export default function DocxExportModal({
   // Active fields for preview
   const activeFields = sortedFields.filter(f => selectedFieldIds.has(f.id));
 
-  // Limit sample responses in the on-screen preview to 20 so rendering is silky smooth
-  const previewResponses = allResponses.slice(0, 20);
+  // Quick move handler in sidebar
+  const handleSidebarQuickMove = (e: React.FormEvent) => {
+    e.preventDefault();
+    const from = parseInt(sidebarFrom.trim(), 10);
+    const to = parseInt(sidebarTo.trim(), 10);
+    const total = orderedResponses.length;
+
+    if (isNaN(from) || from < 1 || from > total) {
+      toast.error(`Please enter a valid "From" row between 1 and ${total}.`);
+      return;
+    }
+    if (isNaN(to) || to < 1 || to > total) {
+      toast.error(`Please enter a valid "To" position between 1 and ${total}.`);
+      return;
+    }
+    if (from === to) {
+      toast('Row is already at position ' + to);
+      return;
+    }
+
+    const copy = [...orderedResponses];
+    const [removed] = copy.splice(from - 1, 1);
+    copy.splice(to - 1, 0, removed);
+    setOrderedResponses(copy);
+    setIsOrderCustomized(true);
+
+    if (previewPageSize > 0) {
+      const targetPage = Math.ceil(to / previewPageSize);
+      setPreviewPage(targetPage);
+    }
+
+    toast.success(`Moved response #${from} to position #${to}!`);
+    setSidebarFrom('');
+    setSidebarTo('');
+  };
+
+  const handleResetOrder = () => {
+    setOrderedResponses([...allResponses]);
+    setIsOrderCustomized(false);
+    setPreviewPage(1);
+    toast.success('Reset to original response order.');
+  };
+
+  // Calculate preview pagination
+  const totalResponses = orderedResponses.length;
+  const effectivePageSize = previewPageSize === 0 ? totalResponses : previewPageSize;
+  const totalPages = Math.max(1, Math.ceil(totalResponses / (effectivePageSize || 1)));
+  const safePage = Math.min(Math.max(1, previewPage), totalPages);
+  const startIdx = (safePage - 1) * effectivePageSize;
+  const previewResponses = previewPageSize === 0
+    ? orderedResponses
+    : orderedResponses.slice(startIdx, startIdx + effectivePageSize);
 
   const handleDownloadDocx = async () => {
     if (selectedFieldIds.size === 0 && !includeTimestamp && !includeResponseId && !includeIndex) {
@@ -165,7 +259,8 @@ export default function DocxExportModal({
         selectedFieldIds: Array.from(selectedFieldIds),
       };
 
-      const blob = await generateResponsesDocx(form, allResponses, options);
+      // Export using the customized orderedResponses!
+      const blob = await generateResponsesDocx(form, orderedResponses, options);
       const blobUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = blobUrl;
@@ -177,7 +272,7 @@ export default function DocxExportModal({
       document.body.removeChild(a);
       window.URL.revokeObjectURL(blobUrl);
 
-      toast.success('Word document (.docx) generated and downloaded!');
+      toast.success('Word document (.docx) generated and downloaded with custom row order!');
       onClose();
     } catch (err: any) {
       console.error('Failed to export DOCX:', err);
@@ -243,6 +338,84 @@ export default function DocxExportModal({
                 />
                 <span className="docx-filename-ext">.docx</span>
               </div>
+            </div>
+
+            {/* Row Order & Sequence Section */}
+            <div className="docx-control-group docx-order-sidebar-group">
+              <div className="docx-control-label">
+                <span>Row Order & Sequence</span>
+                <span
+                  className={`docx-order-status-pill ${
+                    hasCustomOrder ? 'docx-order-status-pill--custom' : 'docx-order-status-pill--default'
+                  }`}
+                >
+                  {hasCustomOrder ? 'Custom Order Active' : 'Default Order'}
+                </span>
+              </div>
+
+              {/* Quick Jump / Move Box */}
+              <form className="docx-sidebar-quick-box" onSubmit={handleSidebarQuickMove}>
+                <div className="docx-sidebar-quick-title">
+                  <i className="fa-solid fa-bolt" /> Quick Move Row
+                </div>
+                <div className="docx-sidebar-quick-inputs">
+                  <div className="docx-sidebar-input-wrap">
+                    <span className="docx-sidebar-input-tag">#</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={totalResponses}
+                      placeholder="15"
+                      value={sidebarFrom}
+                      onChange={e => setSidebarFrom(e.target.value)}
+                      className="docx-sidebar-num-input"
+                      title="Source row number"
+                    />
+                  </div>
+                  <i className="fa-solid fa-arrow-right docx-sidebar-quick-arrow" />
+                  <div className="docx-sidebar-input-wrap">
+                    <span className="docx-sidebar-input-tag">to</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={totalResponses}
+                      placeholder="5"
+                      value={sidebarTo}
+                      onChange={e => setSidebarTo(e.target.value)}
+                      className="docx-sidebar-num-input"
+                      title="Target row position"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="docx-sidebar-quick-move-btn"
+                    disabled={!sidebarFrom || !sidebarTo}
+                    title="Move row position"
+                  >
+                    Move
+                  </button>
+                </div>
+              </form>
+
+              {/* Full Arrangement Manager Button */}
+              <button
+                type="button"
+                className="docx-sidebar-open-order-btn"
+                onClick={() => setIsOrderModalOpen(true)}
+              >
+                <i className="fa-solid fa-arrow-down-up-across-line" />
+                <span>Arrange Response Order ({totalResponses})</span>
+              </button>
+
+              {hasCustomOrder && (
+                <button
+                  type="button"
+                  className="docx-sidebar-reset-btn"
+                  onClick={handleResetOrder}
+                >
+                  Reset to Original Order
+                </button>
+              )}
             </div>
 
             {/* Page Orientation */}
@@ -375,17 +548,61 @@ export default function DocxExportModal({
 
           {/* Right: A4 Sheet Preview Stage */}
           <main className={`docx-stage ${mobileTab === 'preview' ? 'docx-stage--active' : ''}`}>
-            {/* Viewport Top bar */}
+            {/* Viewport Top bar with Pagination */}
             <div className="docx-stage__toolbar">
               <div className="docx-stage__badge">
                 <i className="fa-solid fa-file-lines" />
                 <span>
-                  A4 {orientation === 'landscape' ? 'Landscape (297 × 210 mm)' : 'Portrait (210 × 297 mm)'}
+                  A4 {orientation === 'landscape' ? 'Landscape' : 'Portrait'}
                 </span>
                 <span>•</span>
-                <span>{allResponses.length} Total Responses</span>
+                <span>{totalResponses} Total Responses</span>
+                {hasCustomOrder && (
+                  <span className="docx-order-status-pill docx-order-status-pill--custom">
+                    Custom Order
+                  </span>
+                )}
               </div>
 
+              {/* Preview Pagination Toolbar */}
+              <div className="docx-stage__pagination">
+                <button
+                  type="button"
+                  className="docx-page-nav-btn"
+                  onClick={() => setPreviewPage(p => Math.max(1, p - 1))}
+                  disabled={safePage <= 1}
+                  title="Previous preview page"
+                >
+                  <i className="fa-solid fa-chevron-left" />
+                </button>
+                <span className="docx-page-info">
+                  Page {safePage} of {totalPages}
+                </span>
+                <button
+                  type="button"
+                  className="docx-page-nav-btn"
+                  onClick={() => setPreviewPage(p => Math.min(totalPages, p + 1))}
+                  disabled={safePage >= totalPages}
+                  title="Next preview page"
+                >
+                  <i className="fa-solid fa-chevron-right" />
+                </button>
+                <select
+                  className="docx-page-size-select"
+                  value={previewPageSize}
+                  onChange={e => {
+                    setPreviewPageSize(parseInt(e.target.value, 10));
+                    setPreviewPage(1);
+                  }}
+                  title="Rows per preview page"
+                >
+                  <option value={20}>20 / page</option>
+                  <option value={50}>50 / page</option>
+                  <option value={0}>All rows</option>
+                </select>
+              </div>
+
+              {/* Zoom Controls */}
               <div className="docx-stage__zoom-controls">
                 <button
                   type="button"
@@ -440,9 +657,15 @@ export default function DocxExportModal({
                       <div className="docx-sheet__meta">
                         <span>Generated on: {format(new Date(), 'PP p')}</span>
                         <span>•</span>
-                        <span>Total Records: {allResponses.length}</span>
+                        <span>Total Records: {totalResponses}</span>
                         <span>•</span>
                         <span>Layout: {orientation.toUpperCase()}</span>
+                        {hasCustomOrder && (
+                          <>
+                            <span>•</span>
+                            <span style={{ color: '#059669', fontWeight: 600 }}>Custom Row Order</span>
+                          </>
+                        )}
                       </div>
                     )}
                   </header>
@@ -453,7 +676,7 @@ export default function DocxExportModal({
                   <table className="docx-sheet__table">
                     <thead>
                       <tr>
-                        {includeIndex && <th style={{ width: '40px', textAlign: 'center' }}>#</th>}
+                        {includeIndex && <th style={{ width: '48px', textAlign: 'center' }}>#</th>}
                         {includeResponseId && <th style={{ width: '70px' }}>ID</th>}
                         {includeTimestamp && <th style={{ width: '110px' }}>Submitted At</th>}
                         {activeFields.map(field => (
@@ -472,33 +695,46 @@ export default function DocxExportModal({
                           </td>
                         </tr>
                       ) : (
-                        previewResponses.map((res, idx) => (
-                          <tr key={res.id}>
-                            {includeIndex && (
-                              <td style={{ textAlign: 'center', fontWeight: 600, color: '#64748b', fontSize: '10px' }}>
-                                {idx + 1}
-                              </td>
-                            )}
-                            {includeResponseId && (
-                              <td style={{ fontFamily: 'monospace', fontSize: '9.5px', color: '#64748b' }}>
-                                {res.id.slice(0, 8)}
-                              </td>
-                            )}
-                            {includeTimestamp && (
-                              <td style={{ fontSize: '10px', color: '#64748b', whiteSpace: 'nowrap' }}>
-                                {format(new Date(res.submitted_at), 'yyyy-MM-dd HH:mm')}
-                              </td>
-                            )}
-                            {activeFields.map(field => {
-                              const ans = res.answers.find(a => a.field_id === field.id);
-                              return (
-                                <td key={field.id}>
-                                  {formatCellValue(ans?.value)}
+                        previewResponses.map((res, idx) => {
+                          const globalRowIndex = startIdx + idx + 1;
+                          const originalPos = originalIndexMap.get(res.id);
+                          const wasMoved = originalPos !== undefined && originalPos !== globalRowIndex;
+
+                          return (
+                            <tr key={res.id}>
+                              {includeIndex && (
+                                <td style={{ textAlign: 'center', fontWeight: 600, color: '#64748b', fontSize: '10px' }}>
+                                  <div className="docx-table-num-wrap">
+                                    <span>{globalRowIndex}</span>
+                                    {wasMoved && (
+                                      <span className="docx-table-orig-tag" title={`Originally response #${originalPos}`}>
+                                        was #{originalPos}
+                                      </span>
+                                    )}
+                                  </div>
                                 </td>
-                              );
-                            })}
-                          </tr>
-                        ))
+                              )}
+                              {includeResponseId && (
+                                <td style={{ fontFamily: 'monospace', fontSize: '9.5px', color: '#64748b' }}>
+                                  {res.id.slice(0, 8)}
+                                </td>
+                              )}
+                              {includeTimestamp && (
+                                <td style={{ fontSize: '10px', color: '#64748b', whiteSpace: 'nowrap' }}>
+                                  {format(new Date(res.submitted_at), 'yyyy-MM-dd HH:mm')}
+                                </td>
+                              )}
+                              {activeFields.map(field => {
+                                const ans = res.answers.find(a => a.field_id === field.id);
+                                return (
+                                  <td key={field.id}>
+                                    {formatCellValue(ans?.value)}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
@@ -507,7 +743,9 @@ export default function DocxExportModal({
                 {/* Sheet Footer simulation */}
                 <footer className="docx-sheet__footer">
                   <span>cnote form responses export</span>
-                  <span>Page 1 of {Math.max(1, Math.ceil(allResponses.length / 18))}</span>
+                  <span>
+                    Showing {startIdx + 1}–{Math.min(totalResponses, startIdx + previewResponses.length)} of {totalResponses}
+                  </span>
                 </footer>
               </div>
             </div>
@@ -519,11 +757,16 @@ export default function DocxExportModal({
         <div className="docx-modal__footer">
           <div className="docx-modal__footer-info">
             <span>
-              Exporting <strong>{allResponses.length} responses</strong> with{' '}
+              Exporting <strong>{totalResponses} responses</strong> with{' '}
               <strong>
                 {(includeIndex ? 1 : 0) + (includeResponseId ? 1 : 0) + (includeTimestamp ? 1 : 0) + activeFields.length} columns
               </strong>{' '}
               in <strong>{orientation}</strong> orientation.
+              {hasCustomOrder && (
+                <span className="docx-footer-custom-badge">
+                  <i className="fa-solid fa-arrow-down-up-across-line" /> Custom Sequence
+                </span>
+              )}
             </span>
           </div>
           <div className="docx-modal__footer-actions">
@@ -551,6 +794,20 @@ export default function DocxExportModal({
           </div>
         </div>
       </div>
+
+      {/* Dedicated Interactive Response Order Manager */}
+      <DocxResponseOrderModal
+        isOpen={isOrderModalOpen}
+        onClose={() => setIsOrderModalOpen(false)}
+        orderedResponses={orderedResponses}
+        originalResponses={allResponses}
+        form={form}
+        onUpdateOrder={newOrder => {
+          setOrderedResponses(newOrder);
+          setIsOrderCustomized(true);
+        }}
+        onResetOrder={handleResetOrder}
+      />
     </div>
   );
 }

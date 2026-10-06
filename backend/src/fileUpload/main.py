@@ -19,7 +19,8 @@ max_note_img_upload_size = 10
 cloudinary.config(
     cloud_name=Config.CLOUDINARY_CLOUD_NAME,
     api_key=Config.CLOUDINARY_API_KEY,
-    api_secret=Config.CLOUDINARY_API_SECRET
+    api_secret=Config.CLOUDINARY_API_SECRET,
+    secure=True
 )
 
 _magika = Magika()

@@ -215,3 +215,63 @@ img {
   color: var(--text-primary);
   line-height: 1.5;
 }
+
+/* ===== ProseMirror Table Styles ===== */
+.ProseMirror .tableWrapper {
+  overflow-x: auto;
+  margin: 20px 0;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+
+.ProseMirror table {
+  border-collapse: collapse;
+  width: 100%;
+  table-layout: fixed;
+  overflow: hidden;
+}
+
+.ProseMirror table td,
+.ProseMirror table th {
+  border: 1px solid var(--border);
+  padding: 10px 14px;
+  vertical-align: top;
+  position: relative;
+  min-width: 80px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.ProseMirror table th {
+  background: var(--bg-secondary);
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: left;
+}
+
+.ProseMirror table td {
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.ProseMirror table tr:nth-child(even) td {
+  background: var(--bg-secondary);
+  opacity: 0.8;
+}
+
+.ProseMirror table tr:first-child th,
+.ProseMirror table tr:first-child td {
+  border-top: none;
+}
+.ProseMirror table tr:last-child td {
+  border-bottom: none;
+}
+.ProseMirror table td:first-child,
+.ProseMirror table th:first-child {
+  border-left: none;
+}
+.ProseMirror table td:last-child,
+.ProseMirror table th:last-child {
+  border-right: none;
+}
+

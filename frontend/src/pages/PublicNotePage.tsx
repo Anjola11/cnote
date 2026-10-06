@@ -10,10 +10,18 @@ import Underline from '@tiptap/extension-underline';
 import { TextStyle } from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
 import LinkExtension from '@tiptap/extension-link';
-import Image from '@tiptap/extension-image';
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableHeader } from '@tiptap/extension-table-header';
+import { TableCell } from '@tiptap/extension-table-cell';
+import Heading from '@tiptap/extension-heading';
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 import { common, createLowlight } from 'lowlight';
+import verilog from 'highlight.js/lib/languages/verilog';
+import vhdl from 'highlight.js/lib/languages/vhdl';
+import x86asm from 'highlight.js/lib/languages/x86asm';
 import CodeBlockComponent from '../components/editor/CodeBlockComponent';
+import { CustomImage } from '../components/editor/ImageExtension';
 import { ReactNodeViewRenderer } from '@tiptap/react';
 import { Scripture } from '../components/editor/ScriptureExtension';
 import PublicNavbar from '../components/layout/PublicNavbar';
@@ -24,6 +32,28 @@ import { adaptEditorColors } from '../utils/colorAdaptation';
 import './PublicNotePage.css';
 
 const lowlight = createLowlight(common);
+lowlight.register('verilog', verilog);
+lowlight.register('vhdl', vhdl);
+lowlight.register('x86asm', x86asm);
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[\s_]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+const HeadingWithId = Heading.extend({
+  renderHTML({ node, HTMLAttributes }) {
+    const level = node.attrs.level as number;
+    const text = node.textContent;
+    const id = slugify(text) || undefined;
+    return [`h${level}`, { ...HTMLAttributes, id }, 0];
+  },
+});
 
 const CustomCodeBlock = CodeBlockLowlight.extend({
   addNodeView() {
@@ -43,17 +73,67 @@ export default function PublicNotePage() {
 
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({ codeBlock: false, link: false, underline: false } as any),
+      StarterKit.configure({
+        codeBlock: false,
+        heading: false,
+        // @ts-ignore
+        link: false,
+        // @ts-ignore
+        underline: false,
+      }),
+      HeadingWithId.configure({
+        levels: [1, 2, 3],
+      }),
       Underline,
       TextStyle,
       Color,
-      LinkExtension.configure({ openOnClick: true }),
-      Image.configure({ inline: false }),
+      LinkExtension.configure({
+        openOnClick: false,
+        HTMLAttributes: {
+          target: '_blank',
+          rel: 'noopener noreferrer',
+        },
+      }),
+      CustomImage.configure({
+        inline: false,
+        allowBase64: true,
+      }),
       CustomCodeBlock.configure({ lowlight }),
       Scripture,
+      Table.configure({
+        resizable: false,
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
     ],
     content: note?.content,
     editable: false, // strictly read-only
+    editorProps: {
+      attributes: {
+        spellcheck: 'false',
+      },
+      handleClick(_view, _pos, event) {
+        const target = (event.target as HTMLElement).closest('a');
+        if (!target) return false;
+
+        const href = target.getAttribute('href');
+        if (!href) return false;
+
+        event.preventDefault();
+
+        if (href.startsWith('#')) {
+          const targetId = href.slice(1);
+          const el = document.getElementById(targetId);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth' });
+          }
+        } else {
+          window.open(href, '_blank', 'noopener,noreferrer');
+        }
+        return true;
+      },
+    },
   }, [note?.content]);
 
   // Issue 5: Adapt inline-colored text for dark mode in public view
@@ -92,6 +172,8 @@ export default function PublicNotePage() {
     ? note.display_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
     : '?';
 
+  const avatarUrl = note.avatar_url?.replace(/^http:\/\//, 'https://');
+
   return (
     <div className="public-note-page">
       <SEO 
@@ -108,8 +190,8 @@ export default function PublicNotePage() {
           
           <div className="public-note__author-meta">
             <div className="public-note__avatar">
-              {note.avatar_url ? (
-                <img src={note.avatar_url} alt={note.display_name} />
+              {avatarUrl ? (
+                <img src={avatarUrl} alt={note.display_name} />
               ) : (
                 <span>{initials}</span>
               )}

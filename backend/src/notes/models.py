@@ -101,5 +101,6 @@ class NoteMediaUpload(SQLModel, table=True):
             crop="limit",
             fetch_format="auto",
             quality="auto",
+            secure=True,
         )
         return url
