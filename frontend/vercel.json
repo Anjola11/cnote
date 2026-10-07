@@ -1,4 +1,4 @@
-﻿{
+{
   "version": 2,
   "rewrites": [
     {
@@ -6,12 +6,16 @@
       "destination": "/api/sitemap"
     },
     {
-      "source": "/public/note/:shareToken",
-      "destination": "/api/seo?type=note&shareToken=:shareToken"
+      "source": "/public/note/:link",
+      "destination": "/api/seo?type=note&shareToken=:link"
     },
     {
       "source": "/public/forms/:id",
       "destination": "/api/seo?type=form&id=:id"
+    },
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
     }
   ],
   "headers": [
