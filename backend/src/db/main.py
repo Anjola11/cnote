@@ -1,22 +1,26 @@
-from src.config import Config
+﻿from src.config import Config
 from sqlalchemy.ext.asyncio import create_async_engine 
 from sqlmodel import SQLModel
 from sqlalchemy.orm import sessionmaker
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-engine = create_async_engine(
-    url=Config.DATABASE_URL,
-    echo=False,
-    pool_size=10,
-    max_overflow=20, 
-    pool_pre_ping=True, 
-    pool_recycle=3600
-)
+if "sqlite" in Config.DATABASE_URL.lower():
+    engine = create_async_engine(
+        url=Config.DATABASE_URL,
+        echo=False,
+    )
+else:
+    engine = create_async_engine(
+        url=Config.DATABASE_URL,
+        echo=False,
+        pool_size=10,
+        max_overflow=20, 
+        pool_pre_ping=True, 
+        pool_recycle=3600
+    )
 
 async def init_db():
     async with engine.begin() as conn:
-
-        #import models here
         await conn.run_sync(SQLModel.metadata.create_all)
 
 async_session_maker = sessionmaker(
