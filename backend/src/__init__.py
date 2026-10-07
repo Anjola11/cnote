@@ -14,6 +14,7 @@ from src.limiter import limiter
 from src.notes.routes import notes_router, public_notes_router
 from src.forms.routes import forms_router, public_forms_router
 from src.preferences.routes import preferences_router
+from src.seo.routes import seo_router
 from slowapi.errors import RateLimitExceeded
 from email.utils import parsedate_to_datetime
 from datetime import datetime, timezone
@@ -22,27 +23,28 @@ from slowapi.middleware import SlowAPIMiddleware
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-
     await init_db()
     logger.info("server starting")
-
     await check_redis_connection()
     yield
 
-    # Clean up Redis connections on shutdown
     logger.info("Closing Redis Connection")
     if redis_client:
         await redis_client.close()
     logger.info("Server Closed")
 
+is_prod = getattr(Config, "IS_PRODUCTION", False)
+
 app = FastAPI(
     title="API for CNote",
     description="cnote api documentation",
-    lifespan=lifespan
+    lifespan=lifespan,
+    docs_url=None if is_prod else "/docs",
+    redoc_url=None if is_prod else "/redoc",
+    openapi_url=None if is_prod else "/openapi.json",
 )
 
 app.add_middleware(SlowAPIMiddleware)
-
 
 app.state.limiter = limiter
 
@@ -50,7 +52,7 @@ origins = Config.ALLOWED_ORIGINS
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins = origins,
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -83,10 +85,10 @@ def root_health_check():
 
 
 @app.exception_handler(HTTPException)
-async def custom_http_exception_handler(request: Request, exc:HTTPException):
+async def custom_http_exception_handler(request: Request, exc: HTTPException):
     return JSONResponse(
         status_code=exc.status_code,
-        content = {
+        content={
             "success": False,
             "message": exc.detail,
             "data": None
@@ -105,7 +107,7 @@ def format_validation_errors(errors):
     return formatted
 
 @app.exception_handler(RequestValidationError)
-async def custom_validation_exception_handler(request:Request, exc: RequestValidationError):
+async def custom_validation_exception_handler(request: Request, exc: RequestValidationError):
     logger.error(f"validation error", exc_info=True)
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -128,7 +130,6 @@ async def rate_limit_exception_handler(request: Request, exc):
         try:
             retry_after_seconds = int(float(str(retry_after_raw)))
         except ValueError:
-            # Retry-After can also be an HTTP-date
             try:
                 retry_dt = parsedate_to_datetime(str(retry_after_raw))
                 if retry_dt.tzinfo is None:
@@ -150,6 +151,18 @@ async def rate_limit_exception_handler(request: Request, exc):
     )
 
 
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled exception occurred: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={
+            "success": False,
+            "message": "An unexpected error occurred. Please try again later.",
+            "data": None
+        }
+    )
+
 
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(notes_router, prefix="/api/v1/notes", tags=["notes"])
@@ -158,3 +171,4 @@ app.include_router(file_router, prefix="/api/v1/upload", tags=["upload"])
 app.include_router(public_notes_router, prefix="/api/v1/public", tags=["public"])
 app.include_router(public_forms_router, prefix="/api/v1/public", tags=["public"])
 app.include_router(preferences_router, prefix="/api/v1/preferences", tags=["preferences"])
+app.include_router(seo_router, prefix="/api/v1/public/seo", tags=["public-seo"])

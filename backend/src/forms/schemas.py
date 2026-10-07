@@ -70,6 +70,7 @@ class FormUpdate(BaseModel):
     layout_type: Optional[FormLayoutType] = None
     accepts_responses: Optional[bool] = None
     closes_at: Optional[datetime] = None
+    is_published: Optional[bool] = None
 
 
 class FormOut(BaseModel):
@@ -85,6 +86,7 @@ class FormOut(BaseModel):
     is_published: bool
     accepts_responses: bool
     closes_at: Optional[datetime] = None
+    is_published: Optional[bool] = None
     deleted_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
@@ -101,6 +103,7 @@ class FormListItemOut(BaseModel):
     is_published: bool
     accepts_responses: bool
     closes_at: Optional[datetime] = None
+    is_published: Optional[bool] = None
     created_at: datetime
     updated_at: datetime
     response_count: int = 0

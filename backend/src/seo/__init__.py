@@ -1,0 +1,1 @@
+# SEO Module for Cnote
