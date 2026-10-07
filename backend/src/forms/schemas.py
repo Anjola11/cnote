@@ -86,7 +86,6 @@ class FormOut(BaseModel):
     is_published: bool
     accepts_responses: bool
     closes_at: Optional[datetime] = None
-    is_published: Optional[bool] = None
     deleted_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
@@ -103,7 +102,6 @@ class FormListItemOut(BaseModel):
     is_published: bool
     accepts_responses: bool
     closes_at: Optional[datetime] = None
-    is_published: Optional[bool] = None
     created_at: datetime
     updated_at: datetime
     response_count: int = 0
@@ -249,4 +247,3 @@ class EditResponseResponse(BaseModel):
     success: bool
     message: str
     data: FormResponseOut
-
