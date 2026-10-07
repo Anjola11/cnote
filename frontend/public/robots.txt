@@ -14,7 +14,7 @@ User-agent: CCBot
 User-agent: Bytespider
 Allow: /
 Allow: /public/note/
-Allow: /public/forms/
+Disallow: /public/forms/
 Disallow: /feed
 Disallow: /feed/
 Disallow: /bin
@@ -31,7 +31,7 @@ Disallow: /api/
 User-agent: *
 Allow: /
 Allow: /public/note/
-Allow: /public/forms/
+Disallow: /public/forms/
 Disallow: /feed
 Disallow: /feed/
 Disallow: /bin

@@ -16,6 +16,15 @@
   ],
   "headers": [
     {
+      "source": "/public/forms/(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
       "source": "/feed/(.*)",
       "headers": [
         {

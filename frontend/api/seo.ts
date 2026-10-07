@@ -85,6 +85,8 @@ export default async function handler(req: any, res: any) {
   } else if (itemType === 'form' && id) {
     canonicalUrl = `${SITE_URL}/public/forms/${id}`;
     ogImage = `${SITE_URL}/og-image.png`;
+    // STRICT UNCONDITIONAL NOINDEX FOR ALL FORMS
+    isNoIndex = true;
 
     try {
       const controller = new AbortController();
@@ -98,7 +100,6 @@ export default async function handler(req: any, res: any) {
 
       if (apiRes.status === 404) {
         statusCode = 404;
-        isNoIndex = true;
         title = `Form Not Found | Cnote`;
         description = `The requested form was not found or is no longer accepting responses.`;
       } else if (apiRes.ok) {
@@ -112,19 +113,6 @@ export default async function handler(req: any, res: any) {
           if (data.logo_url) {
             ogImage = data.logo_url;
           }
-
-          jsonLdData = {
-            '@context': 'https://schema.org',
-            '@type': 'WebPage',
-            'name': rawTitle,
-            'description': description,
-            'url': canonicalUrl,
-            'publisher': {
-              '@type': 'Organization',
-              'name': 'Cnote',
-              'url': SITE_URL,
-            },
-          };
         }
       }
     } catch (err) {

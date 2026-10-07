@@ -68,7 +68,7 @@ async def get_form_seo(
 ):
     """
     Public unauthenticated SEO endpoint for shared forms.
-    Returns only safe public metadata fields for scraper/crawler head injection.
+    Enforces noindex header so search engines never index form links.
     """
     stmt = select(Form).where(
         Form.id == form_id,
@@ -85,7 +85,7 @@ async def get_form_seo(
         )
 
     response.headers["Cache-Control"] = CACHE_CONTROL_5MIN
-    response.headers["X-Robots-Tag"] = "noindex"
+    response.headers["X-Robots-Tag"] = "noindex, nofollow"
 
     seo_data = {
         "success": True,
@@ -110,12 +110,13 @@ async def get_sitemap_entries(
     session: AsyncSession = Depends(get_session)
 ):
     """
-    Public unauthenticated endpoint returning all public indexable note & form URLs.
+    Public unauthenticated endpoint returning indexable public note URLs.
+    Excludes user forms to prevent search engine indexing of forms.
     """
     response.headers["Cache-Control"] = CACHE_CONTROL_1HR
     response.headers["X-Robots-Tag"] = "noindex"
 
-    # Public Notes
+    # Public Notes Only
     note_stmt = select(Note.share_token, Note.updated_at, Note.created_at).where(
         Note.is_public == True,
         Note.deleted_at == None
@@ -123,28 +124,12 @@ async def get_sitemap_entries(
     note_res = await session.exec(note_stmt)
     notes = note_res.all()
 
-    # Public Forms
-    form_stmt = select(Form.id, Form.updated_at, Form.created_at).where(
-        Form.is_published == True,
-        Form.deleted_at == None
-    )
-    form_res = await session.exec(form_stmt)
-    forms = form_res.all()
-
     entries = []
     for token, updated, created in notes:
         if token:
             entries.append({
                 "type": "note",
                 "identifier": token,
-                "updated_at": (updated or created).isoformat() if (updated or created) else None
-            })
-
-    for fid, updated, created in forms:
-        if fid:
-            entries.append({
-                "type": "form",
-                "identifier": str(fid),
                 "updated_at": (updated or created).isoformat() if (updated or created) else None
             })
 
