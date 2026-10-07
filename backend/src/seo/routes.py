@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 import uuid
@@ -114,7 +114,6 @@ async def get_sitemap_entries(
     Excludes user forms to prevent search engine indexing of forms.
     """
     response.headers["Cache-Control"] = CACHE_CONTROL_1HR
-    response.headers["X-Robots-Tag"] = "noindex"
 
     # Public Notes Only
     note_stmt = select(Note.share_token, Note.updated_at, Note.created_at).where(
