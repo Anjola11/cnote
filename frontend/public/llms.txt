@@ -1,0 +1,15 @@
+﻿# Cnote — Personal Journal & Form Builder for Thinkers and Writers
+
+> Cnote is a private, beautiful personal journal and document workspace designed for writing code snippets, notes, verses, and custom interactive forms. It provides rich-text note taking, category organization, web sharing, and custom form building with analytics.
+
+## Public Shareable Pages
+
+- [Cnote Home](https://www.usecnote.xyz/): Landing page overview of features, note taking, and form creation.
+- Public Notes (`https://www.usecnote.xyz/public/note/{shareToken}`): User-published public notes shared via unique access tokens.
+- Public Forms (`https://www.usecnote.xyz/public/forms/{id}`): Interactive public forms for collecting survey responses.
+
+## Key Features
+
+- **Rich Note Editor**: Tiptap-powered rich text editing with code block highlighting, tables, images, and export capabilities.
+- **Custom Forms**: Drag-and-drop form builder with multiple question types and CSV response exports.
+- **Privacy & Security**: End-to-end tokenized public links and private user workspace.
